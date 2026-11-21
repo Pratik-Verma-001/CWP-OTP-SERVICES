@@ -12,7 +12,23 @@ export default function Login() {
   async function submit() {
     setBusy(true); setErr("");
     try { await signInWithEmailAndPassword(auth, email, password); router.replace("/dashboard"); }
-    catch { setErr("Invalid email or password"); }
+    catch (e: any) {
+      const code: string = e?.code ?? "unknown";
+      const msg: Record<string, string> = {
+        "auth/invalid-credential": "Wrong email or password.",
+        "auth/wrong-password": "Wrong email or password.",
+        "auth/user-not-found": "No user with this email in Firebase Authentication.",
+        "auth/invalid-email": "Email format is invalid.",
+        "auth/invalid-api-key": "Firebase config is missing or wrong. Check the NEXT_PUBLIC_FIREBASE_* variables in Vercel, then redeploy.",
+        "auth/api-key-not-valid.-please-pass-a-valid-api-key.": "Firebase API key is not valid. Check NEXT_PUBLIC_FIREBASE_API_KEY in Vercel, then redeploy.",
+        "auth/operation-not-allowed": "Email/Password sign-in is not enabled in Firebase Authentication.",
+        "auth/user-disabled": "This user is disabled in Firebase.",
+        "auth/too-many-requests": "Too many attempts. Wait a few minutes and try again.",
+        "auth/network-request-failed": "Network error. Check your connection.",
+        "auth/unauthorized-domain": "Add this domain in Firebase > Authentication > Settings > Authorized domains.",
+      };
+      setErr((msg[code] ?? "Sign in failed.") + ` (${code})`);
+    }
     setBusy(false);
   }
   return (
