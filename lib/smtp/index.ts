@@ -7,6 +7,9 @@ export type SmtpConfig = {
 };
 export type Result = { ok: true; messageId?: string } | { ok: false; code: string; message: string };
 
+// Google shows app passwords as "abcd efgh ijkl mnop"; the spaces are not part of the password.
+const cleanPw = (host: string, pw: string) => (/gmail|google/i.test(host) ? pw.replace(/\s+/g, "") : pw);
+
 // Database settings (encrypted) win; env vars are the fallback for first-time setup.
 export async function getSmtpConfig(): Promise<SmtpConfig | null> {
   const s = await loadStored("smtp");
@@ -14,13 +17,13 @@ export async function getSmtpConfig(): Promise<SmtpConfig | null> {
     if (!s.enabled) return null;
     const c = s.settings, pw = s.secrets.password;
     if (!c.host || !c.port || !c.username || !pw || !c.fromEmail) return null;
-    return { host: c.host, port: Number(c.port), username: c.username, password: pw,
+    return { host: c.host, port: Number(c.port), username: c.username, password: cleanPw(c.host, pw),
       encryption: c.encryption === "tls" ? "tls" : "ssl", fromName: c.fromName || "CWP OTP API",
       fromEmail: c.fromEmail, replyTo: c.replyTo || undefined, timeoutMs: Number(c.timeoutMs) || 10000 };
   }
   const e = process.env;
   if (!e.SMTP_HOST || !e.SMTP_PORT || !e.SMTP_USERNAME || !e.SMTP_PASSWORD || !e.SMTP_FROM_EMAIL) return null;
-  return { host: e.SMTP_HOST, port: Number(e.SMTP_PORT), username: e.SMTP_USERNAME, password: e.SMTP_PASSWORD,
+  return { host: e.SMTP_HOST, port: Number(e.SMTP_PORT), username: e.SMTP_USERNAME, password: cleanPw(e.SMTP_HOST, e.SMTP_PASSWORD),
     encryption: Number(e.SMTP_PORT) === 465 ? "ssl" : "tls", fromName: e.SMTP_FROM_NAME || "CWP OTP API",
     fromEmail: e.SMTP_FROM_EMAIL, timeoutMs: 10000 };
 }
