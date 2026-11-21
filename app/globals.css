@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+html, body { background: #050a1c; color: #e8ecff; overflow-x: hidden; }
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 8px; }
+
+/* Frosted / liquid glass surfaces */
+.glass, .liquid {
+  background: linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.035));
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  backdrop-filter: blur(22px) saturate(170%);
+  border: 1px solid rgba(255,255,255,.13);
+  box-shadow: 0 10px 40px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.04);
+}
+.liquid { position: relative; overflow: hidden; }
+.liquid::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 90% at 15% 0%, rgba(255,255,255,.24), transparent 55%),
+              radial-gradient(80% 60% at 100% 100%, rgba(139,92,246,.18), transparent 60%);
+}
+.blob { position: absolute; border-radius: 9999px; filter: blur(90px); animation: float 18s ease-in-out infinite; }
+.shimmer {
+  background: linear-gradient(110deg, rgba(255,255,255,.04) 30%, rgba(255,255,255,.14) 50%, rgba(255,255,255,.04) 70%);
+  background-size: 200% 100%; animation: shimmer 2.2s linear infinite;
+}
+.glow-text { background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
