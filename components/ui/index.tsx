@@ -7,7 +7,7 @@ export function Backdrop() {
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#050a1c]">
       <div className="blob -left-24 -top-24 h-[28rem] w-[28rem] bg-blue-600/40" />
       <div className="blob -right-24 top-1/4 h-[26rem] w-[26rem] bg-violet-600/35 [animation-delay:-6s]" />
-      <div className="blob -bottom-32 left-1/4 h-[24rem] w-[24rem] bg-cyan-500/25 [animation-delay:-12s]" />
+      <div className="blob -bottom-32 left-1/4 hidden h-[24rem] w-[24rem] bg-cyan-500/25 [animation-delay:-12s] md:block" />
     </div>
   );
 }
@@ -26,6 +26,12 @@ const ICONS: Record<string, string> = {
   docs: "M4 4h12a4 4 0 014 4v12H8a4 4 0 01-4-4zM4 16a4 4 0 014-4h12",
   settings: "M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M14 4v4M6 10v4M16 16v4",
   more: "M5 12h.01M12 12h.01M19 12h.01",
+  mail: "M3 7l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z",
+  chat: "M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z",
+  check: "M5 13l4 4L19 7",
+  x: "M6 6l12 12M18 6L6 18",
+  pulse: "M3 12h4l3-8 4 16 3-8h4",
+  shield: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z",
   logout: "M9 4H5a2 2 0 00-2 2v12a2 2 0 002 2h4M16 17l5-5-5-5M21 12H9",
 };
 export const Icon = ({ name, className = "h-5 w-5" }: { name: string; className?: string }) => (
@@ -52,12 +58,24 @@ function CountUp({ value }: { value: number }) {
   return <>{n}</>;
 }
 
-export const Stat = ({ label, value }: { label: string; value: ReactNode }) => (
-  <div className="glass animate-fade-up rounded-2xl p-4 transition duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(99,102,241,.25)]">
-    <div className="text-xs text-slate-400">{label}</div>
-    <div className="glow-text mt-1 text-3xl font-semibold">{typeof value === "number" ? <CountUp value={value} /> : value}</div>
-  </div>
-);
+const STAT_ICON: [RegExp, string, string][] = [
+  [/email/i, "mail", "text-sky-300 bg-sky-400/15"], [/whatsapp/i, "chat", "text-emerald-300 bg-emerald-400/15"],
+  [/successful/i, "check", "text-emerald-300 bg-emerald-400/15"], [/failed/i, "x", "text-red-300 bg-red-400/15"],
+  [/key/i, "key", "text-violet-300 bg-violet-400/15"], [/project/i, "projects", "text-amber-300 bg-amber-400/15"],
+  [/today/i, "pulse", "text-cyan-300 bg-cyan-400/15"], [/./, "logs", "text-blue-300 bg-blue-400/15"],
+];
+export const Stat = ({ label, value }: { label: string; value: ReactNode }) => {
+  const [, icon, tint] = STAT_ICON.find(([r]) => r.test(label))!;
+  return (
+    <div className="glass animate-fade-up rounded-2xl p-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(99,102,241,.22)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs leading-tight text-slate-400">{label}</div>
+        <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${tint}`}><Icon name={icon} className="h-4 w-4" /></div>
+      </div>
+      <div className="glow-text mt-2 text-3xl font-semibold">{typeof value === "number" ? <CountUp value={value} /> : value}</div>
+    </div>
+  );
+};
 
 export function Btn({ variant = "primary", className = "", ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger" }) {
   const v = {

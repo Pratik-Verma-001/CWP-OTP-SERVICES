@@ -3,25 +3,27 @@
 @tailwind utilities;
 
 :root { color-scheme: dark; }
-html, body { background: #050a1c; color: #e8ecff; overflow-x: hidden; }
+html, body { background: #050a1c; color: #e8ecff; height: 100%; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 ::-webkit-scrollbar { height: 8px; width: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 8px; }
 
-/* Frosted / liquid glass surfaces */
+/* Frosted / liquid glass surfaces (blur kept modest so scrolling stays smooth on phones) */
 .glass, .liquid {
   background: linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.035));
-  -webkit-backdrop-filter: blur(22px) saturate(170%);
-  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid rgba(255,255,255,.13);
-  box-shadow: 0 10px 40px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.04);
+  box-shadow: 0 8px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.2);
 }
-.liquid { position: relative; overflow: hidden; }
+.liquid { position: relative; overflow: hidden; -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); }
 .liquid::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(120% 90% at 15% 0%, rgba(255,255,255,.24), transparent 55%),
-              radial-gradient(80% 60% at 100% 100%, rgba(139,92,246,.18), transparent 60%);
+  background: radial-gradient(120% 90% at 15% 0%, rgba(255,255,255,.22), transparent 55%),
+              radial-gradient(80% 60% at 100% 100%, rgba(139,92,246,.16), transparent 60%);
 }
-.blob { position: absolute; border-radius: 9999px; filter: blur(90px); animation: float 18s ease-in-out infinite; }
+.blob { position: absolute; border-radius: 9999px; filter: blur(70px); will-change: transform; transform: translateZ(0); }
+@media (min-width: 768px) { .blob { animation: float 20s ease-in-out infinite; } }
 .shimmer {
   background: linear-gradient(110deg, rgba(255,255,255,.04) 30%, rgba(255,255,255,.14) 50%, rgba(255,255,255,.04) 70%);
   background-size: 200% 100%; animation: shimmer 2.2s linear infinite;

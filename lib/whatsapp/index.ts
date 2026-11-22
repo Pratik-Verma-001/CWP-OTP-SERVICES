@@ -1,5 +1,6 @@
 import { loadStored } from "@/lib/providers/config";
 import type { Result } from "@/lib/smtp";
+import { getWorkerConfig, sendViaWorker } from "./worker";
 
 export type WaConfig = {
   phoneNumberId: string; businessAccountId?: string; accessToken: string;
@@ -34,7 +35,9 @@ function mapGraphError(status: number, body: any): { code: string; message: stri
 }
 
 // Official Cloud API, approved "authentication" template with a copy-code button.
-export async function sendWhatsAppOtp(to: string, code: string): Promise<Result> {
+export async function sendWhatsAppOtp(to: string, code: string, ttlSeconds = 300): Promise<Result> {
+  const w = await getWorkerConfig(); // QR / pairing-code mode
+  if (w) return w.enabled ? sendViaWorker(w, to, code, ttlSeconds) : NOT_CONFIGURED;
   const c = await getWaConfig();
   if (!c) return NOT_CONFIGURED;
   try {
