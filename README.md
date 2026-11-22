@@ -23,3 +23,6 @@ See the in-dashboard **API Docs** page. Summary: `POST /api/v1/otp/send`, `POST 
 - `supabase/migrations` schema (RLS on, no public policies), `tests/` vitest suite (all mocked, never sends real messages)
 
 Deployment: see `docs/DEPLOYMENT.md`. Security checklist: `docs/SECURITY.md`.
+
+Live app: https://cwp-otp-service.vercel.app
+Database: run `supabase/migrations/0001_init.sql`, then `0002_project_smtp.sql` (per-project email senders).

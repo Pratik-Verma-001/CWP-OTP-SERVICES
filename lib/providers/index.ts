@@ -6,6 +6,6 @@ export type SendResult =
   | { ok: false; code: string; message: string };
 
 // Real delivery only; a missing provider config is reported, never simulated.
-export async function deliver(channel: "email" | "whatsapp", recipient: string, code: string, ttlSeconds: number): Promise<SendResult> {
-  return channel === "email" ? sendEmailOtp(recipient, code, ttlSeconds) : sendWhatsAppOtp(recipient, code, ttlSeconds);
+export async function deliver(channel: "email" | "whatsapp", recipient: string, code: string, ttlSeconds: number, projectId?: string): Promise<SendResult> {
+  return channel === "email" ? sendEmailOtp(recipient, code, ttlSeconds, projectId) : sendWhatsAppOtp(recipient, code, ttlSeconds);
 }

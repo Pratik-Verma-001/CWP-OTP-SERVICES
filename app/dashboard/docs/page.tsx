@@ -5,12 +5,23 @@ const Code = ({ t }: { t: string }) => (
   <div className="relative"><div className="absolute right-2 top-2"><CopyBtn text={t} /></div>
     <pre className="overflow-x-auto rounded-lg bg-navy-900 p-3 pr-16 text-xs">{t}</pre></div>
 );
-const BASE = "https://YOUR-APP.vercel.app";
+const BASE = process.env.NEXT_PUBLIC_APP_URL || "https://cwp-otp-service.vercel.app";
 
 export default function Docs() {
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-semibold">API Documentation</h1>
+      <Card className="space-y-3 text-sm">
+        <h2 className="font-medium">Connect your website in 4 steps</h2>
+        <div className="text-xs text-slate-400">Your API base URL</div>
+        <Code t={BASE} />
+        <ol className="list-decimal space-y-1 pl-5 text-slate-300">
+          <li>Dashboard &gt; <b>Projects</b>: create a project for your website (add its URL under allowed origins).</li>
+          <li><b>API Keys</b>: create a key for that project and copy it once. Keep it in your server&apos;s environment variables.</li>
+          <li><b>Email</b> / <b>WhatsApp</b>: connect your sender, then try it on <b>Test OTP</b>.</li>
+          <li>In your website&apos;s backend call <code>POST {BASE}/api/v1/otp/send</code>, then <code>/api/v1/otp/verify</code> (examples below).</li>
+        </ol>
+      </Card>
       <Card className="space-y-2 text-sm"><h2 className="font-medium">Introduction & authentication</h2>
         <p className="text-slate-300">Call the API from your <b>server</b>, never from browser JavaScript. Send your project key in the <code>x-api-key</code> header. The OTP code is never returned by the API; it is delivered only to the recipient.</p></Card>
       <Card className="space-y-2"><h2 className="text-sm font-medium">POST /api/v1/otp/send</h2>

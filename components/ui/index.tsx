@@ -30,6 +30,7 @@ const ICONS: Record<string, string> = {
   chat: "M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z",
   check: "M5 13l4 4L19 7",
   x: "M6 6l12 12M18 6L6 18",
+  send: "M22 2L11 13M22 2l-7 20-4-9-9-4z",
   pulse: "M3 12h4l3-8 4 16 3-8h4",
   shield: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z",
   logout: "M9 4H5a2 2 0 00-2 2v12a2 2 0 002 2h4M16 17l5-5-5-5M21 12H9",
@@ -83,9 +84,9 @@ export function Btn({ variant = "primary", className = "", ...p }: ButtonHTMLAtt
     ghost: "border border-white/15 bg-white/5 text-slate-100 backdrop-blur hover:bg-white/10",
     danger: "bg-red-500/80 text-white hover:bg-red-500",
   }[variant];
-  return <button {...p} className={`rounded-xl px-4 py-2 text-sm font-medium transition duration-200 active:scale-95 disabled:pointer-events-none disabled:opacity-50 ${v} ${className}`} />;
+  return <button {...p} className={`rounded-xl px-4 py-2.5 text-sm font-medium transition duration-200 sm:py-2 active:scale-95 disabled:pointer-events-none disabled:opacity-50 ${v} ${className}`} />;
 }
-export const inputCls = "w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2 text-sm outline-none backdrop-blur transition placeholder:text-slate-500 focus:border-violet-400 focus:shadow-[0_0_0_3px_rgba(139,92,246,.25)]";
+export const inputCls = "w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-base outline-none backdrop-blur sm:py-2 sm:text-sm transition placeholder:text-slate-500 focus:border-violet-400 focus:shadow-[0_0_0_3px_rgba(139,92,246,.25)]";
 export const Field = ({ label, children }: { label: string; children: ReactNode }) =>
   <label className="block text-xs text-slate-400">{label}<div className="mt-1">{children}</div></label>;
 

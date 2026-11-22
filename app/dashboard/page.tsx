@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useApi } from "@/lib/client/api";
 import { Badge, Card, Empty, ErrorBox, Loading, Stat } from "@/components/ui";
 import { Charts, RangeSelect } from "@/components/dashboard/Charts";
+import SetupChecklist from "@/components/dashboard/SetupChecklist";
 
 export default function Dashboard() {
   const [days, setDays] = useState(7);
@@ -10,9 +11,10 @@ export default function Dashboard() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2"><h1 className="text-lg font-semibold">Dashboard</h1><RangeSelect days={days} onChange={setDays} /></div>
+      <SetupChecklist />
       <ErrorBox text={error} />
       {loading && !s ? <Loading /> : s?.empty ? <Card><Empty text="No projects yet. Create one under Projects to get started." /></Card> : s && (<>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Total OTP requests" value={s.totals.total} /><Stat label="Requests today" value={s.totals.today} />
           <Stat label="Email OTP" value={s.totals.email} /><Stat label="WhatsApp OTP" value={s.totals.whatsapp} />
           <Stat label="Successful verifications" value={s.totals.verifyOk} /><Stat label="Failed verifications" value={s.totals.verifyFail} />

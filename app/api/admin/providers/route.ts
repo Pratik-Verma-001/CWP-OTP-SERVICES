@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { audit, requireAdmin } from "@/lib/auth/admin";
+import { audit, requireAdmin, testMailAllowed } from "@/lib/auth/admin";
 import { loadStored, saveStored } from "@/lib/providers/config";
 import { getSmtpConfig, sendTestEmail, verifySmtp, type SmtpConfig } from "@/lib/smtp";
 import { getWaConfig, verifyWhatsApp } from "@/lib/whatsapp";
@@ -26,7 +26,7 @@ const waSave = z.object({
   secrets: z.object({ accessToken: z.string().max(1000).optional() }),
 });
 const saveSchema = z.discriminatedUnion("provider", [smtpSave, waSave]);
-const testSchema = z.object({ provider: z.enum(["smtp", "whatsapp"]), action: z.enum(["verify", "test_email"]) });
+const testSchema = z.object({ provider: z.enum(["smtp", "whatsapp"]), action: z.enum(["verify", "test_email"]), to: z.string().email().optional() });
 
 // Secrets are write-only: only booleans saying whether one is stored go back.
 export async function GET(req: Request) {
@@ -70,8 +70,8 @@ export async function POST(req: Request) {
     }
     const c: SmtpConfig | null = await getSmtpConfig();
     if (!c) return fail(400, "PROVIDER_NOT_CONFIGURED", "Email provider is not configured.");
-    // Test mail only ever goes to the logged-in admin's own address.
-    const r = p.data.action === "verify" ? await verifySmtp(c) : await sendTestEmail(c, admin.email);
+    if (p.data.action === "test_email" && !(await testMailAllowed(admin.id))) return fail(429, "RATE_LIMITED", "Test email limit reached (10 per hour).");
+    const r = p.data.action === "verify" ? await verifySmtp(c) : await sendTestEmail(c, p.data.to ?? admin.email);
     await audit(admin.id, `provider.smtp.${p.data.action}`, "provider", "smtp", { ok: r.ok });
     return r.ok ? NextResponse.json({ success: true }) : fail(502, r.code, r.message);
   } catch (e) { return internalError(e); }

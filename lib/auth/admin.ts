@@ -49,3 +49,10 @@ export async function requireAdmin(req: Request): Promise<Admin | null> {
 export async function audit(adminId: string, action: string, entityType: string, entityId: string, metadata: object = {}) {
   await db().from("audit_logs").insert({ admin_id: adminId, action, entity_type: entityType, entity_id: entityId, metadata });
 }
+
+// Admins may send at most 10 test emails per hour (prevents using the test button to spam).
+export async function testMailAllowed(adminId: string) {
+  const { count } = await db().from("audit_logs").select("id", { count: "exact", head: true })
+    .eq("admin_id", adminId).eq("action", "provider.smtp.test_email").gte("created_at", new Date(Date.now() - 3600000).toISOString());
+  return (count ?? 0) < 10;
+}

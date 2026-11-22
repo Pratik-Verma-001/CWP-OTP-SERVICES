@@ -39,6 +39,14 @@ function LinkDevice() {
         <span className={`rounded-full px-3 py-1 text-xs ${tone}`}>{data?.worker ? label : "Worker not connected"}</span>
         {data?.worker?.phone && <span className="text-slate-300">+{data.worker.phone}</span>}
       </div>
+      {st !== "connected" && (
+        <ol className="list-decimal space-y-1 rounded-2xl border border-white/10 bg-white/5 p-4 pl-8 text-xs text-slate-300">
+          <li className="font-medium text-slate-100">How to connect WhatsApp</li>
+          <li>Start the worker on Termux or a server: <code>cd worker &amp;&amp; node index.js</code> (see worker/README.md).</li>
+          <li>Make it reachable: <code>cloudflared tunnel --url http://localhost:3001</code> and copy the https link.</li>
+          <li>Paste that link and the worker secret below, tick Enabled, press Save.</li>
+          <li>Press &quot;Show QR code&quot; (scan from another phone) or use the pairing code.</li>
+        </ol>)}
       <ErrorBox text={data?.error ?? ""} />
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="Worker URL"><input className={inputCls} placeholder="https://your-worker.example.com" value={f.workerUrl} onChange={(e) => setF({ ...f, workerUrl: e.target.value })} /></Field>
@@ -50,7 +58,7 @@ function LinkDevice() {
       </div>
 
       {data?.hasSecret && data?.worker && st !== "connected" && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="text-sm font-medium">Option 1: Scan QR</div>
             <p className="text-xs text-slate-400">WhatsApp &gt; Settings &gt; Linked devices &gt; Link a device, then scan.</p>

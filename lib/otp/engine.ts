@@ -46,7 +46,7 @@ export async function sendOtp(key: AuthedKey, input: SendInput): Promise<SendOut
   });
   if (error) throw new Error("db_insert_failed");
 
-  const res = await deliver(input.channel, input.recipient, code, OTP_TTL_SECONDS);
+  const res = await deliver(input.channel, input.recipient, code, OTP_TTL_SECONDS, key.projectId);
   await db().from("delivery_logs").insert({
     otp_request_id: requestId, provider: input.channel === "email" ? "smtp" : "whatsapp",
     provider_message_id: res.ok ? res.messageId ?? null : null,

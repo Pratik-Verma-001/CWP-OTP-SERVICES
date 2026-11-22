@@ -7,8 +7,9 @@ import { auth } from "@/lib/client/firebase";
 import { api } from "@/lib/client/api";
 import { Backdrop, Btn, Icon, Loading, Logo } from "@/components/ui";
 
-const NAV = [["Dashboard", "", "dashboard"], ["API Keys", "/api-keys", "key"], ["Projects", "/projects", "projects"], ["OTP Logs", "/logs", "logs"],
-  ["Analytics", "/analytics", "analytics"], ["Providers", "/providers", "providers"], ["API Docs", "/docs", "docs"], ["Settings", "/settings", "settings"]];
+const NAV = [["Dashboard", "", "dashboard"], ["API Keys", "/api-keys", "key"], ["Email", "/email", "mail"], ["WhatsApp", "/whatsapp", "chat"],
+  ["Projects", "/projects", "projects"], ["OTP Logs", "/logs", "logs"], ["Test OTP", "/test", "send"], ["Analytics", "/analytics", "analytics"],
+  ["API Docs", "/docs", "docs"], ["Settings", "/settings", "settings"]];
 const EASE = "[transition-timing-function:cubic-bezier(.4,0,.2,1)]";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -58,9 +59,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="fixed inset-0 flex overflow-hidden">
       <Backdrop />
 
-      <aside className="liquid m-4 hidden w-64 shrink-0 flex-col rounded-3xl p-4 md:flex">
+      <aside className="liquid m-4 hidden w-64 shrink-0 flex-col rounded-3xl p-4 lg:flex">
         <div className="relative mb-6 flex items-center gap-3"><Logo size={44} /><div><div className="glow-text text-lg font-bold leading-none">CWP</div><div className="text-[11px] tracking-widest text-slate-400">OTP SERVICES</div></div></div>
-        <nav className="relative flex-1">
+        <nav className="relative flex-1 overflow-y-auto">
           <div className={`absolute inset-x-0 top-0 h-11 rounded-xl bg-gradient-to-r from-blue-500/35 to-violet-500/35 shadow-[0_0_24px_rgba(99,102,241,.3)] ring-1 ring-white/20 transition-transform duration-300 ${EASE}`}
             style={{ transform: `translateY(${Math.max(idx, 0) * 48}px)`, opacity: idx < 0 ? 0 : 1 }} />
           {NAV.map(([l, h, ic]) => (
@@ -73,32 +74,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="liquid mx-3 mt-3 flex shrink-0 items-center gap-3 rounded-2xl px-3 py-2 md:ml-0 md:mr-4 md:mt-4">
-          <Logo size={32} className="relative md:hidden" />
+        <header className="liquid mx-3 mt-3 flex shrink-0 items-center gap-3 rounded-2xl px-3 py-2 lg:ml-0 lg:mr-4 lg:mt-4">
+          <Logo size={32} className="relative lg:hidden" />
           <h1 className="relative text-base font-semibold">{title}</h1>
           <form className="relative ml-auto hidden w-full max-w-xs sm:block" onSubmit={(e) => { e.preventDefault(); router.push(`/dashboard/logs?q=${encodeURIComponent(search)}`); }}>
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search request ID…"
               className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-1.5 text-sm outline-none transition focus:border-violet-400" /></form>
           <div className="relative ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-500 to-violet-500 text-sm font-semibold sm:ml-0" title={email}>{initial}</div>
-          <button onClick={logout} className="relative rounded-xl p-2 text-slate-300 hover:bg-white/10 md:hidden" aria-label="Logout"><Icon name="logout" /></button>
+          <button onClick={logout} className="relative rounded-xl p-2 text-slate-300 hover:bg-white/10 lg:hidden" aria-label="Logout"><Icon name="logout" /></button>
         </header>
-        <main ref={scroller} className="flex-1 overflow-y-auto overscroll-contain px-3 pb-28 pt-3 md:pb-6 md:pl-0 md:pr-4 md:pt-4">
+        <main ref={scroller} className="flex-1 overflow-y-auto overscroll-contain px-3 pb-28 pt-3 lg:pb-6 lg:pl-0 lg:pr-4 lg:pt-4">
           <div key={path} className="animate-fade-in mx-auto max-w-6xl">{children}</div>
         </main>
       </div>
 
-      {more && <button aria-label="Close menu" className="absolute inset-0 z-30 bg-black/40 md:hidden" onClick={() => setMore(false)} />}
+      {more && <button aria-label="Close menu" className="absolute inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setMore(false)} />}
       {more && (
-        <div className="liquid animate-sheet-up absolute inset-x-3 z-40 grid grid-cols-2 gap-2 rounded-3xl p-3 md:hidden" style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom))" }}>
+        <div className="liquid animate-sheet-up absolute inset-x-3 z-40 grid grid-cols-2 gap-2 rounded-3xl p-3 lg:hidden" style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom))" }}>
           {NAV.slice(4).map(([l, h, ic]) => (
             <Link key={l} href={"/dashboard" + h} className="relative flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-3 text-sm active:bg-white/10"><Icon name={ic} />{l}</Link>))}
         </div>)}
-      <nav className="liquid absolute inset-x-3 z-40 grid grid-cols-5 rounded-full p-1.5 md:hidden" style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
+      <nav className="liquid absolute inset-x-3 z-40 grid grid-cols-5 rounded-full p-1.5 lg:hidden" style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
         <div className={`absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/5)] rounded-full bg-gradient-to-r from-blue-500/45 to-violet-500/45 shadow-[0_0_18px_rgba(99,102,241,.4)] ring-1 ring-white/25 transition-transform duration-300 ${EASE}`}
           style={{ transform: `translateX(${dockIdx * 100}%)` }} />
         {NAV.slice(0, 4).map(([l, h, ic], i) => (
           <Link key={l} href={"/dashboard" + h} className={`relative z-10 flex flex-col items-center gap-0.5 py-2 text-[10px] transition-colors ${dockIdx === i ? "text-white" : "text-slate-400"}`}>
-            <Icon name={ic} className="h-5 w-5" />{l.replace("API ", "").replace("OTP ", "")}</Link>))}
+            <Icon name={ic} className="h-5 w-5" />{l}</Link>))}
         <button onClick={() => setMore(!more)} className={`relative z-10 flex flex-col items-center gap-0.5 py-2 text-[10px] transition-colors ${dockIdx === 4 ? "text-white" : "text-slate-400"}`}>
           <Icon name="more" className="h-5 w-5" />More</button>
       </nav>

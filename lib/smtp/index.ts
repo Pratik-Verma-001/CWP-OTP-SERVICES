@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer";
 import { loadStored } from "@/lib/providers/config";
+import { db } from "@/lib/supabase/admin";
+import { decrypt, encrypt } from "@/lib/security/crypto";
 
 export type SmtpConfig = {
   host: string; port: number; username: string; password: string;
@@ -8,24 +10,44 @@ export type SmtpConfig = {
 export type Result = { ok: true; messageId?: string } | { ok: false; code: string; message: string };
 
 // Google shows app passwords as "abcd efgh ijkl mnop"; the spaces are not part of the password.
-const cleanPw = (host: string, pw: string) => (/gmail|google/i.test(host) ? pw.replace(/\s+/g, "") : pw);
+export const cleanPw = (host: string, pw: string) => (/gmail|google/i.test(host) ? pw.replace(/\s+/g, "") : pw);
 
-// Database settings (encrypted) win; env vars are the fallback for first-time setup.
-export async function getSmtpConfig(): Promise<SmtpConfig | null> {
-  const s = await loadStored("smtp");
-  if (s) {
-    if (!s.enabled) return null;
-    const c = s.settings, pw = s.secrets.password;
-    if (!c.host || !c.port || !c.username || !pw || !c.fromEmail) return null;
-    return { host: c.host, port: Number(c.port), username: c.username, password: cleanPw(c.host, pw),
-      encryption: c.encryption === "tls" ? "tls" : "ssl", fromName: c.fromName || "CWP OTP API",
-      fromEmail: c.fromEmail, replyTo: c.replyTo || undefined, timeoutMs: Number(c.timeoutMs) || 10000 };
+export function toSmtpConfig(c: Record<string, any>, pw: string): SmtpConfig | null {
+  if (!c.host || !c.port || !c.username || !pw || !c.fromEmail) return null;
+  return { host: c.host, port: Number(c.port), username: c.username, password: cleanPw(c.host, pw),
+    encryption: c.encryption === "tls" ? "tls" : "ssl", fromName: c.fromName || "CWP OTP Services",
+    fromEmail: c.fromEmail, replyTo: c.replyTo || undefined, timeoutMs: Number(c.timeoutMs) || 10000 };
+}
+
+// ---- per-project sender (each project/client can bring its own mailbox) ----
+export async function loadProjectSmtp(projectId: string) {
+  const { data } = await db().from("project_smtp").select("enabled,settings,encrypted_credentials").eq("project_id", projectId).maybeSingle();
+  if (!data) return null;
+  let password = "";
+  try { password = JSON.parse(decrypt(data.encrypted_credentials)).password ?? ""; } catch { password = ""; }
+  return { enabled: !!data.enabled, settings: (data.settings ?? {}) as Record<string, any>, password };
+}
+export async function saveProjectSmtp(projectId: string, enabled: boolean, settings: object, newPassword?: string) {
+  const cur = await loadProjectSmtp(projectId);
+  const password = newPassword || cur?.password || "";
+  const { error } = await db().from("project_smtp").upsert(
+    { project_id: projectId, enabled, settings, encrypted_credentials: encrypt(JSON.stringify({ password })), updated_at: new Date().toISOString() },
+    { onConflict: "project_id" });
+  if (error) throw error;
+}
+
+// A project's own enabled sender wins; otherwise the platform default is used.
+export async function getSmtpConfig(projectId?: string): Promise<SmtpConfig | null> {
+  if (projectId) {
+    const p = await loadProjectSmtp(projectId);
+    if (p?.enabled) return toSmtpConfig(p.settings, p.password); // enabled but incomplete -> not configured (no silent fallback)
   }
+  const s = await loadStored("smtp");
+  if (s) return s.enabled ? toSmtpConfig(s.settings, s.secrets.password ?? "") : null;
   const e = process.env;
   if (!e.SMTP_HOST || !e.SMTP_PORT || !e.SMTP_USERNAME || !e.SMTP_PASSWORD || !e.SMTP_FROM_EMAIL) return null;
-  return { host: e.SMTP_HOST, port: Number(e.SMTP_PORT), username: e.SMTP_USERNAME, password: cleanPw(e.SMTP_HOST, e.SMTP_PASSWORD),
-    encryption: Number(e.SMTP_PORT) === 465 ? "ssl" : "tls", fromName: e.SMTP_FROM_NAME || "CWP OTP API",
-    fromEmail: e.SMTP_FROM_EMAIL, timeoutMs: 10000 };
+  return toSmtpConfig({ host: e.SMTP_HOST, port: e.SMTP_PORT, username: e.SMTP_USERNAME, encryption: Number(e.SMTP_PORT) === 465 ? "ssl" : "tls",
+    fromName: e.SMTP_FROM_NAME, fromEmail: e.SMTP_FROM_EMAIL }, e.SMTP_PASSWORD);
 }
 
 function transport(c: SmtpConfig) {
@@ -59,12 +81,15 @@ async function send(c: SmtpConfig, to: string, subject: string, text: string, ht
   } catch (e) { return { ok: false, ...mapError(e) }; }
 }
 
-export function otpEmail(code: string, ttlMinutes: number) {
-  const text = `Your CWP OTP API verification code is ${code}.\n\nIt expires in ${ttlMinutes} minutes and can be used once.\n\nIf you did not request this code, you can safely ignore this email. Never share this code with anyone.`;
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+
+export function otpEmail(code: string, ttlMinutes: number, brand = "CWP OTP Services") {
+  const b = esc(brand);
+  const text = `Your ${brand} verification code is ${code}.\n\nIt expires in ${ttlMinutes} minutes and can be used once.\n\nIf you did not request this code, you can safely ignore this email. Never share this code with anyone.`;
   const html = `<!doctype html><html><body style="margin:0;background:#0b1224;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="100%" style="max-width:480px;background:#111a33;border-radius:14px;padding:32px">
-<tr><td style="color:#8b9cff;font-size:14px;font-weight:bold;letter-spacing:1px">CWP OTP API</td></tr>
+<tr><td style="color:#8b9cff;font-size:14px;font-weight:bold;letter-spacing:1px">${b}</td></tr>
 <tr><td style="color:#e8ecff;font-size:18px;padding:16px 0 8px">Your verification code</td></tr>
 <tr><td style="padding:8px 0 16px"><div style="background:#1b2750;border-radius:10px;padding:18px;text-align:center;font-size:34px;letter-spacing:8px;font-weight:bold;color:#ffffff">${code}</div></td></tr>
 <tr><td style="color:#b5bfe0;font-size:14px;line-height:1.6">This code expires in <b>${ttlMinutes} minutes</b> and can be used only once.</td></tr>
@@ -73,14 +98,14 @@ export function otpEmail(code: string, ttlMinutes: number) {
   return { text, html };
 }
 
-export async function sendEmailOtp(to: string, code: string, ttlSeconds: number): Promise<Result> {
-  const c = await getSmtpConfig();
+export async function sendEmailOtp(to: string, code: string, ttlSeconds: number, projectId?: string): Promise<Result> {
+  const c = await getSmtpConfig(projectId);
   if (!c) return { ok: false, code: "PROVIDER_NOT_CONFIGURED", message: "Email provider is not configured." };
-  const m = otpEmail(code, Math.round(ttlSeconds / 60));
-  return send(c, to, "Your CWP OTP API verification code", m.text, m.html);
+  const m = otpEmail(code, Math.round(ttlSeconds / 60), c.fromName);
+  return send(c, to, `Your ${c.fromName} verification code`, m.text, m.html);
 }
 
 export async function sendTestEmail(c: SmtpConfig, to: string): Promise<Result> {
-  const t = "This is a test email from CWP OTP API. Your SMTP settings work.";
-  return send(c, to, "CWP OTP API test email", t, `<p>${t}</p>`);
+  const t = `This is a test email from ${c.fromName}. Your SMTP settings work.`;
+  return send(c, to, `${c.fromName} test email`, t, `<p>${esc(t)}</p>`);
 }
