@@ -26,3 +26,11 @@ Deployment: see `docs/DEPLOYMENT.md`. Security checklist: `docs/SECURITY.md`.
 
 Live app: https://cwp-otp-service.vercel.app
 Database: run `supabase/migrations/0001_init.sql`, then `0002_project_smtp.sql` (per-project email senders).
+
+## Panels
+- **User panel** `/dashboard`: projects, API keys, own email sender, test OTP, logs, analytics, docs.
+- **Administration** `/administration` (owners/admins only): users (approve, suspend, edit, delete, features, limits, usage and activity),
+  feature flags, WhatsApp worker (permanent URL + token + QR/pairing code), platform email, platform settings, audit log.
+- Emails in `ADMIN_ALLOWLIST` are always active owners. Everyone else signs up at `/register` (approval mode by default).
+- Run migrations in order: `0001_init.sql`, `0002_project_smtp.sql`, `0003_platform.sql`.
+- WhatsApp worker: see `worker/README.md` (it connects out to the app, no tunnel needed).

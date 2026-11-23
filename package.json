@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:termux": "sh -c \"ulimit -s 65536; vitest run\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.75.0",

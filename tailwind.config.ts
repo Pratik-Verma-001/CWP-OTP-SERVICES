@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       // Glass tokens: existing pages that use navy-* automatically become translucent.
-      colors: { navy: { 900: "rgba(6,10,28,0.55)", 800: "rgba(255,255,255,0.05)", 700: "rgba(255,255,255,0.09)", 600: "rgba(255,255,255,0.12)" } },
+      colors: { a1: "rgb(var(--a1) / <alpha-value>)", a2: "rgb(var(--a2) / <alpha-value>)", navy: { 900: "rgba(6,10,28,0.55)", 800: "rgba(255,255,255,0.05)", 700: "rgba(255,255,255,0.09)", 600: "rgba(255,255,255,0.12)" } },
       keyframes: {
         fadeIn: { from: { opacity: "0" }, to: { opacity: "1" } },
         fadeUp: { from: { opacity: "0", transform: "translateY(14px)" }, to: { opacity: "1", transform: "none" } },

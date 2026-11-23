@@ -1,18 +1,20 @@
-# CWP WhatsApp link worker
+# CWP WhatsApp worker
 
-Links one WhatsApp number (QR scan or pairing code) and sends OTPs for the CWP dashboard.
-This is an UNOFFICIAL method: WhatsApp can restrict or ban the number. Use a spare number, keep volume low.
-It cannot run on Vercel (needs a process that stays running). Run it on a VPS, a home PC, or Termux.
+Links one WhatsApp number (QR scan or pairing code) and sends OTPs for your CWP app.
+It connects OUT to the app, so there is no tunnel and the URL never changes (it is your app URL).
+UNOFFICIAL method: WhatsApp can restrict or ban the number. Use a spare number and keep volume low.
+It must stay running (a VPS, a home PC, or Termux).
 
-## Run
+## Setup
+1. Dashboard > Administration > WhatsApp Worker > "Generate token". Copy the token.
+2. Put it in `worker/.env`:  `WORKER_TOKEN=cwpw_...`  (`APP_URL` is already set)
+3. Run:
 ```bash
 cd worker
-npm install            # Termux: run `pkg install git` first (a dependency is fetched from git)
+npm install            # Termux: `pkg install git nodejs` first
 set -a; . ./.env; set +a
-node index.js          # keep running: pm2 start index.js --name cwp-wa  (VPS)
+node index.js          # VPS: pm2 start index.js --name cwp-wa
 ```
-The session is stored in `worker/auth/` (never commit it). Back it up to avoid re-scanning.
+4. In the dashboard the worker shows "Online". Press "Show QR code" or use the pairing code, then link from WhatsApp.
 
-## Connect to the dashboard
-Dashboard > Providers > WhatsApp > Link device: enter this worker's public URL (https recommended; for a home/Termux
-device use a tunnel such as Cloudflare Tunnel or ngrok) and the same `WORKER_SECRET`, then scan the QR or use the pairing code.
+The session is kept in `worker/auth/` (never commit it). Rotating the token in the dashboard disconnects old workers.

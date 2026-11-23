@@ -1,23 +1,36 @@
-// CWP WhatsApp link worker: links ONE WhatsApp number to this server (QR or pairing code)
-// and sends OTP messages on request from the CWP dashboard/API.
-// Unofficial (WhatsApp Web protocol): the number can be restricted or banned by WhatsApp. Use a spare number.
+// CWP WhatsApp worker. It connects OUT to your CWP app (long-polling), so you do not need a tunnel or a changing URL.
+// The app URL is the permanent worker URL. Unofficial (WhatsApp Web protocol): the number can be restricted or banned.
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } from "@whiskeysockets/baileys";
 import QRCode from "qrcode";
 import pino from "pino";
-import http from "http";
 import fs from "fs";
-import { timingSafeEqual } from "crypto";
+import { createDecipheriv, createHash } from "crypto";
 
-const PORT = Number(process.env.PORT || 3001);
-const SECRET = process.env.WORKER_SECRET || "";
+const APP = (process.env.APP_URL || "").replace(/\/+$/, "");
+const TOKEN = process.env.WORKER_TOKEN || "";
 const AUTH_DIR = process.env.AUTH_DIR || "./auth";
 const MAX_PER_MIN = Number(process.env.MAX_PER_MIN || 15);
-if (SECRET.length < 16) { console.error("Set WORKER_SECRET (16+ characters) in worker/.env"); process.exit(1); }
+if (!APP || !TOKEN) { console.error("Set APP_URL and WORKER_TOKEN in worker/.env (token: Administration > WhatsApp Worker)."); process.exit(1); }
+
+const KEY = createHash("sha256").update("cwp-wa-job:" + TOKEN).digest();
+const open = (sealed) => {
+  const [iv, tag, data] = sealed.split(".").map((p) => Buffer.from(p, "base64"));
+  const d = createDecipheriv("aes-256-gcm", KEY, iv); d.setAuthTag(tag);
+  return JSON.parse(Buffer.concat([d.update(data), d.final()]).toString("utf8"));
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const bad = (code) => Object.assign(new Error(code), { code });
 
 let sock = null, state = "disconnected", qr = null, phone = null, starting = false;
 const sentAt = [];
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const status = () => ({ state, qr, phone });
+
+async function call(path, body) {
+  const r = await fetch(APP + path, { method: "POST", headers: { "x-worker-token": TOKEN, "Content-Type": "application/json" }, body: JSON.stringify(body || {}), signal: AbortSignal.timeout(30000) });
+  if (r.status === 401) throw new Error("401 token rejected: generate a new token in the dashboard and update worker/.env");
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+const report = () => call("/api/worker/status", { state, qr, phone }).catch(() => {});
 
 async function start() {
   if (sock || starting) return;
@@ -29,80 +42,68 @@ async function start() {
     sock = s;
     s.ev.on("creds.update", saveCreds);
     s.ev.on("connection.update", async (u) => {
-      if (u.qr) { qr = await QRCode.toDataURL(u.qr, { margin: 1, width: 320 }); state = "qr"; }
-      if (u.connection === "open") { state = "connected"; qr = null; phone = (s.user?.id || "").split(":")[0].split("@")[0] || null; }
+      if (u.qr) { qr = await QRCode.toDataURL(u.qr, { margin: 1, width: 320 }); state = "qr"; report(); }
+      if (u.connection === "open") { state = "connected"; qr = null; phone = (s.user?.id || "").split(":")[0].split("@")[0] || null; report(); }
       if (u.connection === "close") {
         const code = u.lastDisconnect?.error?.output?.statusCode;
         sock = null; qr = null; phone = null;
         if (code === DisconnectReason.loggedOut) { state = "disconnected"; fs.rmSync(AUTH_DIR, { recursive: true, force: true }); }
         else { state = "connecting"; setTimeout(start, 3000); }
+        report();
       }
     });
   } catch (e) { console.error("start failed:", e.message); sock = null; state = "disconnected"; }
   starting = false;
 }
+const waitFor = async (pred, ms) => { for (let t = 0; t < ms && !pred(); t += 500) await sleep(500); };
 
-async function waitFor(pred, ms = 15000) { for (let t = 0; t < ms && !pred(); t += 500) await sleep(500); }
-
-async function pairingCode(num) {
-  if (state === "connected") throw Object.assign(new Error("linked"), { status: 409, code: "ALREADY_LINKED" });
-  await start();
-  await waitFor(() => state === "qr");
-  if (!sock || state !== "qr") throw Object.assign(new Error("not ready"), { status: 503, code: "NOT_READY" });
-  const code = await sock.requestPairingCode(num);
-  return String(code).match(/.{1,4}/g).join("-");
+async function handle(job) {
+  const p = job.payload ? open(job.payload) : {};
+  if (job.kind === "qr") {
+    if (state !== "connected") { await start(); await waitFor(() => state === "qr" || state === "connected", 12000); }
+    return { state };
+  }
+  if (job.kind === "code") {
+    if (state === "connected") throw bad("ALREADY_LINKED");
+    const num = String(p.phone || "").replace(/\D/g, "");
+    if (num.length < 8 || num.length > 15) throw bad("INVALID_PHONE");
+    await start(); await waitFor(() => state === "qr", 12000);
+    if (!sock || state !== "qr") throw bad("NOT_READY");
+    return { code: String(await sock.requestPairingCode(num)).match(/.{1,4}/g).join("-") };
+  }
+  if (job.kind === "logout") {
+    try { await sock?.logout(); } catch {}
+    sock = null; state = "disconnected"; qr = null; phone = null;
+    fs.rmSync(AUTH_DIR, { recursive: true, force: true }); report();
+    return { state };
+  }
+  if (job.kind === "send") {
+    if (state !== "connected" || !sock) throw bad("NOT_LINKED");
+    const now = Date.now();
+    while (sentAt.length && now - sentAt[0] > 60000) sentAt.shift();
+    if (sentAt.length >= MAX_PER_MIN) throw bad("RATE_LIMITED");
+    const num = String(p.to || "").replace(/\D/g, "");
+    if (num.length < 8 || num.length > 15 || !p.text) throw bad("INVALID_REQUEST");
+    const [r] = (await sock.onWhatsApp(num)) || [];
+    if (!r?.exists) throw bad("NOT_ON_WHATSAPP");
+    sentAt.push(now);
+    const m = await sock.sendMessage(r.jid, { text: String(p.text).slice(0, 500) }); // message text is never logged
+    return { messageId: m?.key?.id };
+  }
+  throw bad("UNKNOWN_JOB");
 }
 
-const authed = (req) => {
-  const g = Buffer.from(String(req.headers["x-worker-secret"] || "")), e = Buffer.from(SECRET);
-  return g.length === e.length && timingSafeEqual(g, e);
-};
-const readBody = (req) => new Promise((res, rej) => {
-  let d = "";
-  req.on("data", (c) => { d += c; if (d.length > 10000) { req.destroy(); rej(new Error("too big")); } });
-  req.on("end", () => { try { res(d ? JSON.parse(d) : {}); } catch (e) { rej(e); } });
-});
-const json = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
-
-http.createServer(async (req, res) => {
-  try {
-    if (!authed(req)) return json(res, 401, { error: "UNAUTHORIZED" });
-    const url = req.url.split("?")[0];
-    if (req.method === "GET" && url === "/status") return json(res, 200, status());
-    const body = req.method === "POST" ? await readBody(req) : {};
-
-    if (req.method === "POST" && url === "/link/qr") {
-      if (state !== "connected") { await start(); await waitFor(() => state === "qr" || state === "connected"); }
-      return json(res, 200, status());
-    }
-    if (req.method === "POST" && url === "/link/code") {
-      const num = String(body.phone || "").replace(/\D/g, "");
-      if (num.length < 8 || num.length > 15) return json(res, 400, { error: "INVALID_PHONE" });
-      try { return json(res, 200, { code: await pairingCode(num) }); }
-      catch (e) { return json(res, e.status || 500, { error: e.code || "PAIRING_FAILED" }); }
-    }
-    if (req.method === "POST" && url === "/send") {
-      if (state !== "connected" || !sock) return json(res, 503, { error: "NOT_LINKED" });
-      const now = Date.now();
-      while (sentAt.length && now - sentAt[0] > 60000) sentAt.shift();
-      if (sentAt.length >= MAX_PER_MIN) return json(res, 429, { error: "RATE_LIMITED" });
-      const num = String(body.to || "").replace(/\D/g, "");
-      const text = String(body.text || "").slice(0, 500);
-      if (num.length < 8 || num.length > 15 || !text) return json(res, 400, { error: "INVALID_REQUEST" });
-      const [r] = (await sock.onWhatsApp(num)) || [];
-      if (!r?.exists) return json(res, 404, { error: "NOT_ON_WHATSAPP" });
-      sentAt.push(now);
-      const m = await sock.sendMessage(r.jid, { text }); // message text is never logged
-      return json(res, 200, { messageId: m?.key?.id });
-    }
-    if (req.method === "POST" && url === "/logout") {
-      try { await sock?.logout(); } catch {}
-      sock = null; state = "disconnected"; qr = null; phone = null;
-      fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-      return json(res, 200, status());
-    }
-    json(res, 404, { error: "NOT_FOUND" });
-  } catch (e) { console.error("request failed:", e.message); json(res, 500, { error: "WORKER_ERROR" }); }
-}).listen(PORT, () => console.log(`CWP WhatsApp worker listening on :${PORT}`));
-
-if (fs.existsSync(`${AUTH_DIR}/creds.json`)) start();
+async function main() {
+  console.log("CWP WhatsApp worker started. Connecting to", APP);
+  if (fs.existsSync(`${AUTH_DIR}/creds.json`)) start();
+  for (;;) {
+    try {
+      const { job } = await call("/api/worker/poll", { state, qr, phone });
+      if (!job) continue;
+      let ok = true, result;
+      try { result = await handle(job); } catch (e) { ok = false; result = { error: String(e.code || "FAILED").slice(0, 40) }; if (!e.code) console.error("job failed:", e.message); }
+      await call("/api/worker/result", { id: job.id, ok, result }).catch((e) => console.error("result:", e.message));
+    } catch (e) { console.error("poll:", e.message); await sleep(5000); }
+  }
+}
+main();
