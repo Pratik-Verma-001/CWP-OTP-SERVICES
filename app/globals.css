@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Accent themes: the user panel is teal to blue, the administration panel is amber to rose. */
+:root, [data-panel="user"] { --a1: 13 148 136; --a2: 37 99 235; --t1: 45 212 191; --t2: 96 165 250; }
+[data-panel="admin"] { --a1: 217 119 6; --a2: 225 29 72; --t1: 251 191 36; --t2: 251 113 133; }
+
+:root { color-scheme: dark; }
+html, body { background: #060b14; color: #e8ecff; height: 100%; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 8px; }
+
+/* Inside the components layer so Tailwind utilities (absolute, fixed...) can still override position. */
+@layer components {
+  .glass, .liquid {
+    background: linear-gradient(135deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 8px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.18);
+  }
+  .liquid { position: relative; overflow: hidden; -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); }
+  .liquid::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(120% 90% at 15% 0%, rgba(255,255,255,.2), transparent 55%),
+                radial-gradient(80% 60% at 100% 100%, rgb(var(--a2) / .16), transparent 60%);
+  }
+  .glow-text { background: linear-gradient(90deg, rgb(var(--t1)), rgb(var(--t2))); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .shimmer {
+    background: linear-gradient(110deg, rgba(255,255,255,.04) 30%, rgba(255,255,255,.14) 50%, rgba(255,255,255,.04) 70%);
+    background-size: 200% 100%; animation: shimmer 2.2s linear infinite;
+  }
+}
+.blob { position: absolute; border-radius: 9999px; filter: blur(70px); will-change: transform; transform: translateZ(0); }
+@media (min-width: 768px) { .blob { animation: float 20s ease-in-out infinite; } }
+
+/* Responsive hardening: nothing may push the page wider than the screen */
+main { overflow-x: hidden; }
+.grid > *, .flex > * { min-width: 0; }
+img, svg, video { max-width: 100%; }
+input, select, textarea { min-width: 0; max-width: 100%; }
+input[type="date"] { min-height: 2.5rem; }
+pre, code { overflow-wrap: anywhere; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
