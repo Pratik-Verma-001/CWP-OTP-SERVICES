@@ -5,10 +5,10 @@ import { LOGO } from "@/lib/logoData";
 
 export function Backdrop() {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#050a1c]">
-      <div className="blob -left-24 -top-24 h-[28rem] w-[28rem] bg-a1/35" />
-      <div className="blob -right-24 top-1/4 h-[26rem] w-[26rem] bg-a2/30 [animation-delay:-6s]" />
-      <div className="blob -bottom-32 left-1/4 hidden h-[24rem] w-[24rem] bg-a1/20 [animation-delay:-12s] md:block" />
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#060b14]">
+      <div className="blob c1 -left-40 -top-40 h-[40rem] w-[40rem]" />
+      <div className="blob c2 -right-48 top-1/4 h-[36rem] w-[36rem] [animation-delay:-8s]" />
+      <div className="blob c1 -bottom-56 left-1/4 hidden h-[32rem] w-[32rem] [animation-delay:-14s] lg:block" />
     </div>
   );
 }
@@ -49,7 +49,7 @@ export const Icon = ({ name, className = "h-5 w-5" }: { name: string; className?
 );
 
 export const Card = ({ children, className = "" }: { children: ReactNode; className?: string }) =>
-  <div className={`glass animate-fade-up rounded-2xl p-4 ${className}`}>{children}</div>;
+  <div className={`glass rounded-2xl p-4 ${className}`}>{children}</div>;
 
 function CountUp({ value }: { value: number }) {
   const [n, setN] = useState(0);
@@ -75,7 +75,7 @@ const STAT_ICON: [RegExp, string, string][] = [
 export const Stat = ({ label, value }: { label: string; value: ReactNode }) => {
   const [, icon, tint] = STAT_ICON.find(([r]) => r.test(label))!;
   return (
-    <div className="glass animate-fade-up rounded-2xl p-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(99,102,241,.22)]">
+    <div className="glass rounded-2xl p-4 transition-transform duration-200 hover:-translate-y-0.5">
       <div className="flex items-start justify-between gap-2">
         <div className="text-xs leading-tight text-slate-400">{label}</div>
         <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${tint}`}><Icon name={icon} className="h-4 w-4" /></div>
@@ -107,6 +107,19 @@ export const Badge = ({ s }: { s: string }) =>
 
 export const Loading = () => (
   <div className="space-y-3" aria-busy="true"><div className="shimmer h-20 rounded-2xl" /><div className="shimmer h-20 rounded-2xl" /><div className="shimmer h-20 rounded-2xl" /></div>
+);
+export const PageLoading = () => (
+  <div className="space-y-4" role="status" aria-busy="true" aria-label="Loading">
+    <div className="shimmer h-8 w-48 rounded-xl" />
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="shimmer h-24 rounded-2xl" />)}</div>
+    <div className="shimmer h-56 rounded-2xl" />
+  </div>
+);
+export const Splash = () => (
+  <>
+    <Backdrop />
+    <div className="grid min-h-screen place-items-center"><Logo size={80} className="animate-pulse" /></div>
+  </>
 );
 export const Empty = ({ text }: { text: string }) => <div className="py-8 text-center text-sm text-slate-500">{text}</div>;
 export const ErrorBox = ({ text }: { text: string }) =>

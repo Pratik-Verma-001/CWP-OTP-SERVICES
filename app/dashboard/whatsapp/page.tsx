@@ -1,11 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useApi } from "@/lib/client/api";
-import { useSession } from "@/lib/client/session";
 import { Badge, Card, Loading, PageHead } from "@/components/ui";
 
 export default function WhatsAppInfo() {
-  const { me } = useSession();
+  const { data: me } = useApi<any>("/api/admin/me");
   const { data } = useApi<any>("/api/admin/setup");
   const allowed = me ? me.features.whatsapp_otp !== false : true;
   const admin = me?.role === "owner" || me?.role === "admin";

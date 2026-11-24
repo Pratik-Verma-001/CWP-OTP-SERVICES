@@ -14,8 +14,10 @@ export async function GET(req: Request) {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const todayStart = new Date(new Date().toISOString().slice(0, 10)).toISOString();
 
-    const projects = await ownedProjects(admin.id);
-    const { count: activeProjects } = await db().from("projects").select("id", { count: "exact", head: true }).eq("owner_id", admin.id).eq("status", "active");
+    const [projects, { count: activeProjects }] = await Promise.all([
+      ownedProjects(admin.id),
+      db().from("projects").select("id", { count: "exact", head: true }).eq("owner_id", admin.id).eq("status", "active"),
+    ]);
     const ids = projects.map((p) => p.id);
     if (!ids.length) return NextResponse.json({ success: true, empty: true, totals: {}, daily: [], byProject: [], recent: [] });
 

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { api, useApi } from "@/lib/client/api";
-import { Badge, Btn, Card, Empty, ErrorBox, Field, inputCls, Loading } from "@/components/ui";
+import { Badge, Btn, Card, Empty, ErrorBox, Field, inputCls, Loading, PageLoading } from "@/components/ui";
 
 export default function Projects() {
   const { data, error, loading, reload } = useApi<any>("/api/admin/projects");
@@ -26,7 +26,7 @@ export default function Projects() {
         <div><Btn onClick={create} disabled={!f.name}>Create project</Btn></div>
       </Card>
       <ErrorBox text={err || error} />
-      {loading && !data ? <Loading /> : !data?.projects?.length ? <Card><Empty text="No projects yet" /></Card> :
+      {loading && !data ? <PageLoading /> : !data?.projects?.length ? <Card><Empty text="No projects yet" /></Card> :
         data.projects.map((p: any) => (
           <Card key={p.id} className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">

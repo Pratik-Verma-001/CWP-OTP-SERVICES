@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useApi } from "@/lib/client/api";
-import { Badge, Card, Empty, ErrorBox, Loading, Stat } from "@/components/ui";
+import { Badge, Card, Empty, ErrorBox, Loading, PageLoading, Stat } from "@/components/ui";
 import { Charts, RangeSelect } from "@/components/dashboard/Charts";
 import SetupChecklist from "@/components/dashboard/SetupChecklist";
 
@@ -13,7 +13,7 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center justify-between gap-2"><h1 className="text-lg font-semibold">Dashboard</h1><RangeSelect days={days} onChange={setDays} /></div>
       <SetupChecklist />
       <ErrorBox text={error} />
-      {loading && !s ? <Loading /> : s?.empty ? <Card><Empty text="No projects yet. Create one under Projects to get started." /></Card> : s && (<>
+      {loading && !s ? <PageLoading /> : s?.empty ? <Card><Empty text="No projects yet. Create one under Projects to get started." /></Card> : s && (<>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Total OTP requests" value={s.totals.total} /><Stat label="Requests today" value={s.totals.today} />
           <Stat label="Email OTP" value={s.totals.email} /><Stat label="WhatsApp OTP" value={s.totals.whatsapp} />

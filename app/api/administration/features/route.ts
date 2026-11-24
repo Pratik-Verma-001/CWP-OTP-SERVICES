@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { audit, requireAdmin } from "@/lib/auth/admin";
 import { db } from "@/lib/supabase/admin";
-import { loadFeatures } from "@/lib/platform";
+import { clearPlatformCache, loadFeatures } from "@/lib/platform";
 import { fail, internalError } from "@/lib/http";
 
 const key = z.string().regex(/^[a-z][a-z0-9_]{1,40}$/);
@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     const { error } = await db().from("features").insert({ ...p.data, builtin: false });
     if (error?.code === "23505") return fail(409, "DUPLICATE", "A feature with this key already exists.");
     if (error) throw error;
+    clearPlatformCache();
     await audit(admin.id, "feature.create", "feature", p.data.key);
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (e) { return internalError(e); }
@@ -38,6 +39,7 @@ export async function PATCH(req: Request) {
     const { data, error } = await db().from("features").update(rest).eq("key", k).select("key");
     if (error) throw error;
     if (!data?.length) return fail(404, "NOT_FOUND", "Feature not found");
+    clearPlatformCache();
     await audit(admin.id, "feature.update", "feature", k, rest);
     return NextResponse.json({ success: true });
   } catch (e) { return internalError(e); }
@@ -50,6 +52,7 @@ export async function DELETE(req: Request) {
     if (!key.safeParse(k).success) return fail(400, "INVALID_REQUEST", "Invalid key");
     const { data } = await db().from("features").delete().eq("key", k).eq("builtin", false).select("key");
     if (!data?.length) return fail(400, "INVALID_REQUEST", "Built-in features cannot be deleted. Disable them instead.");
+    clearPlatformCache();
     await audit(admin.id, "feature.delete", "feature", k);
     return NextResponse.json({ success: true });
   } catch (e) { return internalError(e); }

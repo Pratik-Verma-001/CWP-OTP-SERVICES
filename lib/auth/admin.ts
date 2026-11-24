@@ -19,6 +19,11 @@ export const REASON_TEXT: Record<Reason, string> = {
   database_error: "Database error. Make sure the SQL migrations 0001, 0002 and 0003 were run in Supabase.",
 };
 
+// Profile cache (20s): most requests then need no database lookup to authenticate. Suspensions apply within 20s.
+const PROFILE_TTL = 20_000;
+const profiles = new Map<string, { at: number; p: any }>();
+const cacheOn = process.env.NODE_ENV !== "test";
+
 const allowlist = () => (process.env.ADMIN_ALLOWLIST ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 export const isBootstrapAdmin = (email: string) => allowlist().includes(email.toLowerCase());
 export const isPlatformAdmin = (u: { role: Role }) => u.role === "owner" || u.role === "admin";
@@ -47,6 +52,13 @@ export async function checkUser(req: Request): Promise<AdminCheck> {
   const boot = isBootstrapAdmin(email);
   const now = new Date().toISOString();
 
+  const hit = cacheOn ? profiles.get(decoded.uid) : undefined;
+  if (hit && Date.now() - hit.at < PROFILE_TTL && hit.p.email === email) {
+    if (hit.p.status === "pending") return { reason: "pending" };
+    if (hit.p.status === "suspended") return { reason: "suspended" };
+    return { user: await buildUser(hit.p) };
+  }
+
   const { data: existing, error: readErr } = await db().from("admin_profiles").select("*").eq("firebase_uid", decoded.uid).maybeSingle();
   if (readErr) { console.error("auth: database error:", readErr.message); return { reason: "database_error" }; }
   let p: any = existing;
@@ -60,13 +72,16 @@ export async function checkUser(req: Request): Promise<AdminCheck> {
     if (error || !data) { console.error("auth: create profile failed:", error?.message); return { reason: "database_error" }; }
     p = data;
   } else {
-    const patch: Record<string, any> = { last_login_at: now };
+    const patch: Record<string, any> = {};
+    // Only touch the row when something changed or the last-login stamp is older than 10 minutes.
+    if (!p.last_login_at || Date.now() - new Date(p.last_login_at).getTime() > 600_000) patch.last_login_at = now;
     if (p.email !== email) patch.email = email;
     // The ADMIN_ALLOWLIST env var is the root of trust: listed emails are always active platform owners.
     if (boot && (p.role === "user" || p.status !== "active")) { patch.role = p.role === "user" ? "owner" : p.role; patch.status = "active"; }
-    await db().from("admin_profiles").update(patch).eq("id", p.id);
+    if (Object.keys(patch).length) await db().from("admin_profiles").update(patch).eq("id", p.id);
     p = { ...p, ...patch };
   }
+  if (cacheOn) profiles.set(decoded.uid, { at: Date.now(), p });
   if (p.status === "pending") return { reason: "pending" };
   if (p.status === "suspended") return { reason: "suspended" };
   return { user: await buildUser(p) };

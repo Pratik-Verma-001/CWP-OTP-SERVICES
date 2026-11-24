@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { download, useApi } from "@/lib/client/api";
-import { Badge, Btn, Card, Empty, ErrorBox, inputCls, Loading } from "@/components/ui";
+import { Badge, Btn, Card, Empty, ErrorBox, inputCls, Loading, PageLoading } from "@/components/ui";
 
 export default function Logs() {
   const [f, setF] = useState({ project: "", channel: "", status: "", from: "", to: "", q: "", sort: "desc" });
@@ -29,7 +29,7 @@ export default function Logs() {
       </Card>
       <ErrorBox text={error} />
       <Card className="hidden overflow-x-auto p-0 sm:block">
-        {loading && !data ? <div className="p-4"><Loading /></div> : !data?.rows?.length ? <Empty text="No logs match these filters" /> : (
+        {loading && !data ? <div className="p-4"><PageLoading /></div> : !data?.rows?.length ? <Empty text="No logs match these filters" /> : (
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="text-xs text-slate-400"><tr>{["Request ID", "Project", "Recipient", "Channel", "Status", "Provider", "Attempts", "Created", "Expires"].map((h) => <th key={h} className="p-3 font-normal">{h}</th>)}</tr></thead>
             <tbody>{data.rows.map((r: any) => (
@@ -41,7 +41,7 @@ export default function Logs() {
               </tr>))}</tbody></table>)}
       </Card>
       <div className="space-y-2 sm:hidden">
-        {loading && !data ? <Loading /> : !data?.rows?.length ? <Card><Empty text="No logs match these filters" /></Card> : data.rows.map((r: any) => (
+        {loading && !data ? <PageLoading /> : !data?.rows?.length ? <Card><Empty text="No logs match these filters" /></Card> : data.rows.map((r: any) => (
           <Card key={r.id} className="space-y-1.5 !p-3 text-sm">
             <div className="flex items-center justify-between gap-2"><span className="truncate font-medium">{r.projects?.name}</span><Badge s={r.status} /></div>
             <div className="truncate text-slate-300">{r.masked_recipient} · {r.channel}</div>

@@ -1,8 +1,10 @@
 "use client";
+import { useEffect } from "react";
 import { useSession } from "@/lib/client/session";
+import { prefetchApi } from "@/lib/client/api";
 import PanelShell, { type NavItem } from "@/components/shell/PanelShell";
 import Denied from "@/components/shell/Denied";
-import { Backdrop, Loading } from "@/components/ui";
+import { Splash } from "@/components/ui";
 
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard", group: "Overview", exact: true, dock: true },
@@ -19,7 +21,8 @@ const NAV: NavItem[] = [
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
   const s = useSession();
-  if (s.state === "loading") return <><Backdrop /><div className="mx-auto max-w-md p-8"><Loading /></div></>;
+  useEffect(() => { if (s.state === "ok") prefetchApi(["/api/admin/stats?days=7", "/api/admin/setup", "/api/admin/projects"]); }, [s.state]);
+  if (s.state === "loading") return <Splash />;
   if (s.state === "denied" || !s.me) return <Denied why={s.why} />;
   const admin = s.me.role === "owner" || s.me.role === "admin";
   return (

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { api, useApi } from "@/lib/client/api";
-import { Badge, Btn, Card, CopyBtn, Empty, ErrorBox, Field, inputCls, Loading } from "@/components/ui";
+import { Badge, Btn, Card, CopyBtn, Empty, ErrorBox, Field, inputCls, Loading, PageLoading } from "@/components/ui";
 
 export default function ApiKeys() {
   const { data, error, loading, reload } = useApi<any>("/api/admin/projects");
@@ -25,7 +25,7 @@ export default function ApiKeys() {
         <div className="flex items-end"><Btn disabled={!projectId || !name} onClick={() => act(async () => { const r = await api("/api/admin/keys", { method: "POST", body: JSON.stringify({ projectId, name }) }); setName(""); return r; })}>Create key</Btn></div>
       </Card>
       <ErrorBox text={err || error} />
-      {loading && !data ? <Loading /> : !projects.length ? <Card><Empty text="Create a project first" /></Card> :
+      {loading && !data ? <PageLoading /> : !projects.length ? <Card><Empty text="Create a project first" /></Card> :
         projects.map((p: any) => (
           <Card key={p.id} className="space-y-3"><div className="font-medium">{p.name}</div>
             {!p.api_keys.length ? <Empty text="No keys yet" /> : p.api_keys.map((k: any) => (

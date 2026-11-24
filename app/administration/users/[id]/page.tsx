@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api, useApi } from "@/lib/client/api";
-import { useSession } from "@/lib/client/session";
 import { Badge, Bars, Btn, Card, Empty, ErrorBox, Field, Icon, inputCls, Loading, Stat } from "@/components/ui";
 
 type Tri = "default" | "on" | "off";
@@ -12,7 +11,7 @@ const LIMITS: [string, string][] = [["maxProjects", "Max projects"], ["maxKeysPe
 export default function UserDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { me } = useSession();
+  const { data: me } = useApi<any>("/api/admin/me");
   const { data: d, error, loading, reload } = useApi<any>(`/api/administration/users/${id}`);
   const [name, setName] = useState(""), [notes, setNotes] = useState(""), [role, setRole] = useState("user");
   const [feat, setFeat] = useState<Record<string, Tri>>({}), [lim, setLim] = useState<Record<string, string>>({});

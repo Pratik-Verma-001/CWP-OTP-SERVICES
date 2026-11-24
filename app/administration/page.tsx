@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { api, useApi } from "@/lib/client/api";
-import { Badge, Btn, Card, Empty, ErrorBox, Loading, PageHead, Stat } from "@/components/ui";
+import { Badge, Btn, Card, Empty, ErrorBox, Loading, PageLoading, PageHead, Stat } from "@/components/ui";
 
 export default function Overview() {
   const { data: s, error, loading, reload } = useApi<any>("/api/administration/overview");
@@ -10,7 +10,7 @@ export default function Overview() {
     <div className="space-y-4">
       <PageHead title="Platform overview" sub="Everything happening across all users." />
       <ErrorBox text={error} />
-      {loading && !s ? <Loading /> : s && (
+      {loading && !s ? <PageLoading /> : s && (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <Stat label="Users" value={s.users} /><Stat label="Pending approval" value={s.pending} /><Stat label="Projects" value={s.projects} />

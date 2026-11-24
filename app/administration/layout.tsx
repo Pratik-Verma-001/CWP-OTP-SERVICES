@@ -1,8 +1,10 @@
 "use client";
+import { useEffect } from "react";
 import { useSession } from "@/lib/client/session";
+import { prefetchApi } from "@/lib/client/api";
 import PanelShell, { type NavItem } from "@/components/shell/PanelShell";
 import Denied from "@/components/shell/Denied";
-import { Backdrop, Loading } from "@/components/ui";
+import { Splash } from "@/components/ui";
 
 const NAV: NavItem[] = [
   { label: "Overview", href: "/administration", icon: "dashboard", group: "Overview", exact: true, dock: true },
@@ -16,7 +18,8 @@ const NAV: NavItem[] = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const s = useSession();
-  if (s.state === "loading") return <><Backdrop /><div className="mx-auto max-w-md p-8"><Loading /></div></>;
+  useEffect(() => { if (s.state === "ok" && (s.me?.role === "owner" || s.me?.role === "admin")) prefetchApi(["/api/administration/overview", "/api/administration/users?page=1"]); }, [s.state, s.me?.role]);
+  if (s.state === "loading") return <Splash />;
   if (s.state === "denied" || !s.me) return <Denied why={s.why} />;
   if (s.me.role !== "owner" && s.me.role !== "admin")
     return <Denied title="Administrators only" why="Your account does not have access to the administration panel." back={{ label: "Go to my dashboard", href: "/dashboard" }} />;
