@@ -7,23 +7,24 @@ import { auth } from "@/lib/client/firebase";
 import { Backdrop, Icon, Logo } from "@/components/ui";
 import type { Me } from "@/lib/client/session";
 
-export type NavItem = { label: string; href: string; icon: string; group: string; exact?: boolean; dock?: boolean };
+export type NavItem = { label: string; short?: string; href: string; icon: string; group: string; exact?: boolean; dock?: boolean };
 const EASE = "[transition-timing-function:cubic-bezier(.4,0,.2,1)]";
 
-// One shell for both panels. The root is fixed to the screen and only <main> scrolls, so a phone's address bar
-// can never resize the page and make the navigation jump. Desktop (lg+): sidebar. Phone/tablet: bottom dock.
-export default function PanelShell({ variant, nav, me, switchTo, children }: {
-  variant: "user" | "admin"; nav: NavItem[]; me: Me; switchTo?: { label: string; href: string; icon: string }; children: ReactNode;
+// One shell for both panels. The root is fixed to the screen and only <main> scrolls, so a phone's address bar can never
+// resize the page. Desktop (lg+): sidebar. Phone and tablet: a bottom dock with exactly 4 shortcuts + "More".
+export default function PanelShell({ variant, nav, me, onLogout, switchTo, children }: {
+  variant: "user" | "admin"; nav: NavItem[]; me: Me; onLogout?: () => Promise<void>;
+  switchTo?: { label: string; href: string; icon: string }; children: ReactNode;
 }) {
   const path = usePathname(), router = useRouter();
   const scroller = useRef<HTMLElement>(null);
   const [more, setMore] = useState(false), [q, setQ] = useState(""), [pending, setPending] = useState<string | null>(null);
   useEffect(() => { setMore(false); setPending(null); scroller.current?.scrollTo({ top: 0 }); }, [path]);
   const go = (href: string) => { if (href !== path) { setPending(href); setTimeout(() => setPending(null), 8000); } };
-  const logout = async () => { await signOut(auth); router.replace("/login"); };
+  const logout = onLogout ?? (async () => { await signOut(auth); router.replace("/login"); });
 
   const active = nav.filter((i) => (i.exact ? path === i.href : path === i.href || path.startsWith(i.href + "/"))).sort((a, b) => b.href.length - a.href.length)[0];
-  const current = (pending && nav.find((i) => i.href === pending)) || active;
+  const current = (pending && nav.find((i) => i.href === pending)) || active; // highlight instantly on tap
   const dock = nav.filter((i) => i.dock);
   const dockIdx = current && dock.includes(current) ? dock.indexOf(current) : dock.length;
   const groups = nav.reduce<Record<string, NavItem[]>>((m, i) => { (m[i.group] ??= []).push(i); return m; }, {});
@@ -50,14 +51,14 @@ export default function PanelShell({ variant, nav, me, switchTo, children }: {
               {items.map((i) => (
                 <Link key={i.href} href={i.href} onClick={() => go(i.href)} className={`mb-0.5 flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-colors ${current === i
                   ? "bg-gradient-to-r from-a1/30 to-a2/30 text-white ring-1 ring-white/15" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-                  <Icon name={i.icon} className="h-[18px] w-[18px]" />{i.label}</Link>))}
+                  <Icon name={i.icon} className="h-[18px] w-[18px] shrink-0" /><span className="truncate">{i.label}</span></Link>))}
             </div>))}
         </nav>
         <div className="relative mt-3 space-y-2 border-t border-white/10 pt-3">
           {switchTo && <Link href={switchTo.href} className="flex h-10 items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 text-sm hover:bg-white/10"><Icon name={switchTo.icon} className="h-[18px] w-[18px]" />{switchTo.label}</Link>}
           <div className="flex items-center gap-2">
             {avatar()}
-            <div className="min-w-0 flex-1"><div className="truncate text-sm">{me.name || me.email}</div><div className="truncate text-[11px] capitalize text-slate-500">{me.role}</div></div>
+            <div className="min-w-0 flex-1"><div className="truncate text-sm">{me.name || me.email}</div><div className="truncate text-[11px] text-slate-500">{admin ? "Platform administrator" : "Account"}</div></div>
             <button onClick={logout} aria-label="Logout" className="rounded-xl p-2 text-slate-400 hover:bg-white/10 hover:text-white"><Icon name="logout" /></button>
           </div>
         </div>
@@ -89,21 +90,21 @@ export default function PanelShell({ variant, nav, me, switchTo, children }: {
         </main>
       </div>
 
-      {/* Phone and tablet: dock */}
+      {/* Phone and tablet: dock (solid, no blur over scrolling content) */}
       {more && <button aria-label="Close menu" className="absolute inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setMore(false)} />}
       {more && (
-        <div className="liquid animate-sheet-up absolute inset-x-3 z-40 grid grid-cols-2 gap-2 rounded-3xl p-3 sm:grid-cols-3 lg:hidden" style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom))" }}>
+        <div className="dock animate-sheet-up absolute inset-x-3 z-40 grid grid-cols-2 gap-2 rounded-3xl p-3 sm:left-1/2 sm:right-auto sm:w-[28rem] sm:-translate-x-1/2 lg:hidden" style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}>
           {nav.filter((i) => !i.dock).map((i) => (
-            <Link key={i.href} href={i.href} onClick={() => go(i.href)} className="relative flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-3 text-sm active:bg-white/10"><Icon name={i.icon} />{i.label}</Link>))}
-          {switchTo && <Link href={switchTo.href} className="relative flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3 py-3 text-sm"><Icon name={switchTo.icon} />{switchTo.label}</Link>}
+            <Link key={i.href} href={i.href} onClick={() => go(i.href)} className="flex min-w-0 items-center gap-2 rounded-2xl bg-white/5 px-3 py-3 text-sm active:bg-white/10"><Icon name={i.icon} className="shrink-0" /><span className="truncate">{i.label}</span></Link>))}
+          {switchTo && <Link href={switchTo.href} className="flex min-w-0 items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3 py-3 text-sm"><Icon name={switchTo.icon} className="shrink-0" /><span className="truncate">{switchTo.label}</span></Link>}
         </div>)}
-      <nav className="liquid absolute inset-x-3 z-40 grid grid-cols-5 rounded-full p-1.5 sm:inset-x-auto sm:left-1/2 sm:w-[28rem] sm:-translate-x-1/2 lg:hidden" style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
-        <div className={`absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/5)] rounded-full bg-gradient-to-r from-a1/50 to-a2/50 ring-1 ring-white/25 transition-transform duration-300 ${EASE}`} style={{ transform: `translateX(${dockIdx * 100}%)` }} />
+      <nav className="dock absolute inset-x-3 z-40 grid grid-cols-5 rounded-3xl p-1.5 sm:left-1/2 sm:right-auto sm:w-[28rem] sm:-translate-x-1/2 lg:hidden" style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
+        <div className={`absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/5)] rounded-2xl bg-gradient-to-r from-a1/50 to-a2/50 ring-1 ring-white/25 transition-transform duration-300 ${EASE}`} style={{ transform: `translateX(${dockIdx * 100}%)` }} />
         {dock.map((i, n) => (
-          <Link key={i.href} href={i.href} onClick={() => go(i.href)} className={`relative z-10 flex flex-col items-center gap-0.5 py-2 text-[10px] transition-colors ${dockIdx === n ? "text-white" : "text-slate-400"}`}>
-            <Icon name={i.icon} className="h-5 w-5" />{i.label.replace("API ", "").replace("OTP ", "")}</Link>))}
-        <button onClick={() => setMore(!more)} className={`relative z-10 flex flex-col items-center gap-0.5 py-2 text-[10px] transition-colors ${dockIdx === dock.length ? "text-white" : "text-slate-400"}`}>
-          <Icon name="more" className="h-5 w-5" />More</button>
+          <Link key={i.href} href={i.href} onClick={() => go(i.href)} className={`relative z-10 flex min-h-[3.5rem] min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[10px] leading-none transition-colors ${dockIdx === n ? "text-white" : "text-slate-400"}`}>
+            <Icon name={i.icon} className="h-5 w-5 shrink-0" /><span className="max-w-full truncate">{i.short ?? i.label}</span></Link>))}
+        <button onClick={() => setMore(!more)} aria-expanded={more} className={`relative z-10 flex min-h-[3.5rem] min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[10px] leading-none transition-colors ${dockIdx === dock.length ? "text-white" : "text-slate-400"}`}>
+          <Icon name="more" className="h-5 w-5 shrink-0" /><span>More</span></button>
       </nav>
     </div>
   );

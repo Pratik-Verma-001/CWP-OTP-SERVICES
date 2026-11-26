@@ -36,11 +36,12 @@ export async function authWorker(req: Request): Promise<boolean> {
   return !!data?.token_hash && safeEqualHex(tokenHash(t), data.token_hash);
 }
 export async function workerStatus() {
-  const { data } = await db().from("wa_worker").select("state,qr,phone,last_seen,token_hash").eq("id", 1).maybeSingle();
+  const { data } = await db().from("wa_worker").select("state,qr,phone,last_seen,token_hash,last_error,qr_at,worker_version").eq("id", 1).maybeSingle();
   const online = !!data?.last_seen && Date.now() - new Date(data.last_seen).getTime() < ONLINE_MS;
   return {
     hasToken: !!data?.token_hash, online, state: online ? (data?.state ?? "disconnected") : "offline",
     qr: online ? data?.qr ?? null : null, phone: online ? data?.phone ?? null : null, lastSeen: data?.last_seen ?? null,
+    qrAt: online && data?.qr ? data?.qr_at ?? null : null, lastError: online ? data?.last_error ?? null : null, version: data?.worker_version ?? null,
   };
 }
 export async function workerMode(): Promise<"none" | "disabled" | "enabled"> {
@@ -95,4 +96,6 @@ export const cleanReport = (b: any) => ({
   state: STATES.includes(b?.state) ? (b.state as string) : "disconnected",
   qr: typeof b?.qr === "string" && b.qr.startsWith("data:image/png;base64,") && b.qr.length < 40000 ? (b.qr as string) : null,
   phone: typeof b?.phone === "string" && /^\d{6,16}$/.test(b.phone) ? (b.phone as string) : null,
+  last_error: typeof b?.error === "string" && b.error ? b.error.replace(/[^\x20-\x7E]/g, "").slice(0, 160) : null,
+  worker_version: typeof b?.version === "string" ? b.version.replace(/[^\w.\-]/g, "").slice(0, 20) : null,
 });

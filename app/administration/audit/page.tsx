@@ -14,7 +14,7 @@ export default function Audit() {
       <Card className="space-y-0 !p-0">
         {loading && !data ? <div className="p-4"><Loading /></div> : !data?.rows?.length ? <Empty text="Nothing recorded yet" /> : data.rows.map((r: any) => (
           <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 px-4 py-3 text-sm first:border-0">
-            <div className="min-w-0"><code className="text-xs">{r.action}</code><div className="truncate text-xs text-slate-500">{r.admin_profiles?.email ?? "system"} · {r.entity_type}{r.entity_id ? ` ${String(r.entity_id).slice(0, 8)}` : ""}</div></div>
+            <div className="min-w-0"><code className="text-xs">{r.action}</code><div className="truncate text-xs text-slate-500">{r.admin_profiles?.email ?? (r.metadata?.actor === "admin" ? "administrator" : "system")} · {r.entity_type}{r.entity_id ? ` ${String(r.entity_id).slice(0, 8)}` : ""}</div></div>
             <span className="text-xs text-slate-400">{new Date(r.created_at).toLocaleString()}</span></div>))}
       </Card>
       <div className="flex items-center justify-between text-sm text-slate-400"><span>{data?.total ?? 0} entries</span>

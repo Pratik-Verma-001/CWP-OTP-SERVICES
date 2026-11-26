@@ -44,6 +44,7 @@ export default function Login() {
             <div className="flex justify-between text-xs text-slate-400">
               <button onClick={reset} className="hover:text-white">Forgot password?</button>
               <Link href="/register" className="hover:text-white">Create account</Link>
+              <Link href="/docs" className="hover:text-white">Docs</Link>
             </div>
           </div>
         </div>

@@ -7,42 +7,49 @@
 [data-panel="admin"] { --a1: 217 119 6; --a2: 225 29 72; --t1: 251 191 36; --t2: 251 113 133; }
 
 :root { color-scheme: dark; }
-html, body { background: #060b14; color: #e8ecff; height: 100%; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+html, body { background: #060b14; color: #e8ecff; -webkit-tap-highlight-color: transparent; }
 body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 ::-webkit-scrollbar { height: 8px; width: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 8px; }
 
-/* Inside the components layer so Tailwind utilities (absolute, fixed...) can still override position. */
+/* Ambient background: ONE static painted layer (no blur filters, no animation, no extra compositor layers). */
+.app-bg {
+  background:
+    radial-gradient(60rem 40rem at -10% -10%, rgb(var(--a1) / .22), transparent 60%),
+    radial-gradient(50rem 36rem at 110% 35%, rgb(var(--a2) / .20), transparent 60%),
+    #060b14;
+}
+
 @layer components {
-  /* Cards: no backdrop blur (the expensive part); a translucent fill looks the same on the dark backdrop. */
+  /* Cards: translucent fill only. Real backdrop blur on many scrolling elements is what makes phones lag. */
   .glass {
     background: linear-gradient(135deg, rgba(34,46,72,.74), rgba(20,29,48,.70));
     border: 1px solid rgba(255,255,255,.10);
     box-shadow: 0 6px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.12);
   }
-  /* Navigation surfaces (sidebar, header, dock): the only places that use real glass blur. */
+  /* Sidebar and header. Blur only on large screens, where nothing scrolls underneath them. */
   .liquid {
     position: relative; overflow: hidden;
-    background: linear-gradient(135deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
-    -webkit-backdrop-filter: blur(14px) saturate(150%); backdrop-filter: blur(14px) saturate(150%);
+    background: linear-gradient(135deg, rgba(44,58,90,.82), rgba(22,31,52,.80));
     border: 1px solid rgba(255,255,255,.12);
-    box-shadow: 0 8px 28px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.18);
+    box-shadow: 0 8px 28px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.16);
   }
   .liquid::before {
     content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(120% 90% at 15% 0%, rgba(255,255,255,.16), transparent 55%),
-                radial-gradient(80% 60% at 100% 100%, rgb(var(--a2) / .14), transparent 60%);
+    background: radial-gradient(120% 90% at 15% 0%, rgba(255,255,255,.14), transparent 55%),
+                radial-gradient(80% 60% at 100% 100%, rgb(var(--a2) / .12), transparent 60%);
+  }
+  @media (min-width: 1024px) {
+    .liquid { backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%); }
+  }
+  /* Bottom dock and its menu overlay scrolling content: solid, never blurred. */
+  .dock {
+    background: rgba(14,21,38,.97); border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.10);
   }
   .glow-text { background: linear-gradient(90deg, rgb(var(--t1)), rgb(var(--t2))); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .shimmer {
-    background: linear-gradient(110deg, rgba(255,255,255,.04) 30%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.04) 70%);
-    background-size: 200% 100%; animation: shimmer 1.8s linear infinite;
-  }
+  .shimmer { background: rgba(255,255,255,.07); animation: pulse 1.6s cubic-bezier(.4,0,.6,1) infinite; }
 }
-/* Glow blobs are plain radial gradients (cheap), not blurred layers; they only drift on larger screens. */
-.blob { position: absolute; border-radius: 9999px; background: radial-gradient(closest-side, rgb(var(--c) / .30), transparent); will-change: transform; transform: translateZ(0); }
-.blob.c1 { --c: var(--a1); } .blob.c2 { --c: var(--a2); }
-@media (min-width: 1024px) { .blob { animation: float 24s ease-in-out infinite; } }
 
 /* Responsive hardening: nothing may push the page wider than the screen */
 main { overflow-x: hidden; }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth/admin";
+import { requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase/admin";
 import { getSmtpConfig } from "@/lib/smtp";
 import { workerStatus } from "@/lib/whatsapp/worker";

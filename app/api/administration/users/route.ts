@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";
-import { audit, requireAdmin } from "@/lib/auth/admin";
+import { auditAdmin, requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase/admin";
 import { firebaseAuth } from "@/lib/firebase/admin";
 import { fail, internalError } from "@/lib/http";
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
   } catch (e) { return internalError(e); }
 }
 
-const createSchema = z.object({ email: z.string().email().max(254), name: z.string().max(80).optional(), role: z.enum(["user", "admin"]).default("user") });
+const createSchema = z.object({ email: z.string().email().max(254), name: z.string().max(80).optional() });
 
 // Add a user: creates the Firebase login and returns a one-time password-reset link to hand to them.
 export async function POST(req: Request) {
@@ -46,7 +46,6 @@ export async function POST(req: Request) {
     if (!admin) return fail(401, "UNAUTHORIZED", "Unauthorized");
     const p = createSchema.safeParse(await req.json().catch(() => null));
     if (!p.success) return fail(400, "INVALID_REQUEST", "Enter a valid email address.");
-    if (p.data.role === "admin" && admin.role !== "owner") return fail(403, "FORBIDDEN", "Only an owner can create administrators.");
     const email = p.data.email.toLowerCase();
     const auth = firebaseAuth();
     let uid: string;
@@ -54,11 +53,11 @@ export async function POST(req: Request) {
     catch (e: any) {
       if (e?.code === "auth/email-already-exists") uid = (await auth.getUserByEmail(email)).uid; else throw e;
     }
-    const { data, error } = await db().from("admin_profiles").insert({ firebase_uid: uid, email, role: p.data.role, status: "active", display_name: p.data.name ?? null }).select("id").single();
+    const { data, error } = await db().from("admin_profiles").insert({ firebase_uid: uid, email, role: "user", status: "active", display_name: p.data.name ?? null }).select("id").single();
     if (error?.code === "23505") return fail(409, "DUPLICATE", "A user with this email already exists.");
     if (error || !data) throw error;
     const resetLink = await auth.generatePasswordResetLink(email);
-    await audit(admin.id, "user.create", "user", data.id, { role: p.data.role });
+    await auditAdmin("user.create", "user", data.id);
     return NextResponse.json({ success: true, id: data.id, resetLink }, { status: 201 });
   } catch (e) { return internalError(e); }
 }

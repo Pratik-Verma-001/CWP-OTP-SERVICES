@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { audit, requireAdmin } from "@/lib/auth/admin";
+import { auditAdmin, requireAdmin } from "@/lib/admin-auth";
 import { DEFAULT_LIMITS, getSetting, setSetting, type Limits } from "@/lib/platform";
 import { fail, internalError } from "@/lib/http";
 
@@ -26,7 +26,7 @@ export async function PUT(req: Request) {
     const p = schema.safeParse(await req.json().catch(() => null));
     if (!p.success) return fail(400, "INVALID_REQUEST", "Invalid settings");
     await Promise.all([setSetting("registration", p.data.registration), setSetting("maintenance", p.data.maintenance), setSetting("announcement", p.data.announcement), setSetting("limits", p.data.limits)]);
-    await audit(admin.id, "settings.update", "settings", "platform", { registration: p.data.registration, maintenance: p.data.maintenance });
+    await auditAdmin("settings.update", "settings", "platform", { registration: p.data.registration, maintenance: p.data.maintenance });
     return NextResponse.json({ success: true });
   } catch (e) { return internalError(e); }
 }

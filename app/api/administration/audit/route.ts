@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth/admin";
+import { requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase/admin";
 import { fail, internalError } from "@/lib/http";
 

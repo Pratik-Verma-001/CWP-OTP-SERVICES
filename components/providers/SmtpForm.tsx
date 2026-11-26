@@ -11,7 +11,7 @@ const PRESETS: [string, string, string, string][] = [
 const BLANK = { enabled: false, host: "", port: "465", username: "", password: "", encryption: "ssl", fromName: "", fromEmail: "", replyTo: "", timeoutMs: "10000" };
 
 export default function SmtpForm({ scope }: { scope: Scope }) {
-  const path = scope.kind === "global" ? "/api/admin/providers" : `/api/admin/project-smtp?projectId=${scope.projectId}`;
+  const path = scope.kind === "global" ? "/api/administration/providers" : `/api/admin/project-smtp?projectId=${scope.projectId}`;
   const { data, error, loading, reload } = useApi<any>(path);
   const info = scope.kind === "global" ? data?.smtp : data;
   const [f, setF] = useState<any>(BLANK);
@@ -30,13 +30,13 @@ export default function SmtpForm({ scope }: { scope: Scope }) {
     setBusy(true); setMsg(null);
     try { await fn(); setMsg({ ok: true, text: ok }); await reload(); } catch (e: any) { setMsg({ ok: false, text: e.message }); } finally { setBusy(false); }
   };
-  const save = () => run(() => api(scope.kind === "global" ? "/api/admin/providers" : "/api/admin/project-smtp", {
+  const save = () => run(() => api(scope.kind === "global" ? "/api/administration/providers" : "/api/admin/project-smtp", {
     method: "PUT", body: JSON.stringify(scope.kind === "global"
       ? { provider: "smtp", enabled: f.enabled, settings: settings(), secrets: { password: f.password || undefined } }
       : { projectId: scope.projectId, enabled: f.enabled, settings: settings(), password: f.password || undefined }) }), "Saved");
-  const test = (action: string) => run(() => api(scope.kind === "global" ? "/api/admin/providers" : "/api/admin/project-smtp", {
+  const test = (action: string) => run(() => api(scope.kind === "global" ? "/api/administration/providers" : "/api/admin/project-smtp", {
     method: "POST", body: JSON.stringify(scope.kind === "global" ? { provider: "smtp", action, to: to || undefined } : { projectId: scope.projectId, action, to: to || undefined }) }),
-    action === "verify" ? "Connection OK: server and login accepted." : `Test email sent${to ? ` to ${to}` : " to your admin address"}. Check the inbox (and spam).`);
+    action === "verify" ? "Connection OK: server and login accepted." : `Test email sent${to ? ` to ${to}` : " to your account email"}. Check the inbox (and spam).`);
   const t = (k: string, label: string, type = "text", ph = "") =>
     <Field label={label}><input className={inputCls} type={type} placeholder={ph} value={f[k] ?? ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>;
 
@@ -62,7 +62,7 @@ export default function SmtpForm({ scope }: { scope: Scope }) {
       <div className="flex flex-wrap gap-2"><Btn disabled={busy} onClick={save}>Save</Btn><Btn variant="ghost" disabled={busy} onClick={() => test("verify")}>Test connection</Btn></div>
       <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
         <div className="text-sm font-medium">Send a test email</div>
-        <input className={inputCls} type="email" placeholder="Send to (empty = your admin email)" value={to} onChange={(e) => setTo(e.target.value)} />
+        <input className={inputCls} type="email" placeholder={scope.kind === "global" ? "Send the test to (email address)" : "Send to (empty = your account email)"} value={to} onChange={(e) => setTo(e.target.value)} />
         <Btn variant="ghost" disabled={busy} onClick={() => test("test_email")}>Send test email</Btn>
       </div>
       {msg && <div className={`text-sm ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>{msg.text}</div>}

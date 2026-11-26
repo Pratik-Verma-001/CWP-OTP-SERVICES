@@ -50,7 +50,7 @@ describe("provider configuration missing", () => {
 const decoded = (o: object = {}) => ({ uid: "u", email: "someone@example.com", email_verified: true, ...o });
 const user = (o: object = {}) => ({ id: "u1", firebase_uid: "u", email: "someone@example.com", role: "user", status: "active", display_name: null, features: {}, limits: {}, ...o });
 
-describe("access control (users and admins)", () => {
+describe("access control (regular users)", () => {
   it("rejects a missing token", async () => expect(await checkUser(req())).toEqual({ reason: "no_token" }));
   it("rejects an invalid token", async () => {
     verifyIdToken.mockRejectedValue(new Error("bad"));
@@ -60,17 +60,15 @@ describe("access control (users and admins)", () => {
     verifyIdToken.mockResolvedValue(decoded({ email_verified: false }));
     expect(await checkUser(req("t"))).toEqual({ reason: "email_not_verified" });
   });
-  it("makes ADMIN_ALLOWLIST emails active owners", async () => {
-    verifyIdToken.mockResolvedValue(decoded({ email: "Admin@Example.com" }));
-    const r = await checkUser(req("t"));
-    expect("user" in r && r.user.role).toBe("owner");
-    expect("user" in r && r.user.status).toBe("active");
+  it("never grants admin rights: even a former admin email is just a pending user", async () => {
+    verifyIdToken.mockResolvedValue(decoded({ email: "admin@example.com" }));
+    expect(await checkUser(req("t"))).toEqual({ reason: "pending" });
   });
   it("puts new sign-ups on 'pending' by default", async () => {
     verifyIdToken.mockResolvedValue(decoded());
     expect(await checkUser(req("t"))).toEqual({ reason: "pending" });
   });
-  it("activates new sign-ups when registration is open", async () => {
+  it("activates new sign-ups when registration is open, always as role user", async () => {
     fake.tables.platform_settings = [{ key: "registration", value: "open" }];
     verifyIdToken.mockResolvedValue(decoded());
     const r = await checkUser(req("t"));
@@ -86,15 +84,13 @@ describe("access control (users and admins)", () => {
     verifyIdToken.mockResolvedValue(decoded());
     expect(await checkUser(req("t"))).toEqual({ reason: "suspended" });
   });
-  it("applies per-user feature overrides but not to platform admins", async () => {
+  it("treats a stored owner/admin role as a normal user (no special rights)", async () => {
     fake.tables.features = [{ key: "email_otp", enabled: true, default_enabled: true, builtin: true }];
-    fake.tables.admin_profiles = [user({ features: { email_otp: false } })];
+    fake.tables.admin_profiles = [user({ role: "owner", features: { email_otp: false } })];
     verifyIdToken.mockResolvedValue(decoded());
     const r = await checkUser(req("t"));
+    expect("user" in r && r.user.role).toBe("user");
     expect("user" in r && r.user.features.email_otp).toBe(false);
-    fake.tables.admin_profiles = [user({ role: "admin", features: { email_otp: false } })];
-    const a = await checkUser(req("t"));
-    expect("user" in a && a.user.features.email_otp).toBe(true);
   });
 });
 

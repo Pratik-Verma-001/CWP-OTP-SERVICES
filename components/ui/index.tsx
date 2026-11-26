@@ -4,13 +4,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { LOGO } from "@/lib/logoData";
 
 export function Backdrop() {
-  return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#060b14]">
-      <div className="blob c1 -left-40 -top-40 h-[40rem] w-[40rem]" />
-      <div className="blob c2 -right-48 top-1/4 h-[36rem] w-[36rem] [animation-delay:-8s]" />
-      <div className="blob c1 -bottom-56 left-1/4 hidden h-[32rem] w-[32rem] [animation-delay:-14s] lg:block" />
-    </div>
-  );
+  return <div aria-hidden className="app-bg pointer-events-none fixed inset-0 -z-10" />;
 }
 
 export const Logo = ({ size = 40, className = "" }: { size?: number; className?: string }) =>

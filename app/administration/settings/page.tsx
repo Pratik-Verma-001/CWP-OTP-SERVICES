@@ -3,6 +3,28 @@ import { useEffect, useState } from "react";
 import { api, useApi } from "@/lib/client/api";
 import { Btn, Card, ErrorBox, Field, inputCls, Loading, PageHead, Toggle } from "@/components/ui";
 
+function ChangePassword() {
+  const [f, setF] = useState({ current: "", next: "", again: "" });
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null), [busy, setBusy] = useState(false);
+  const save = async () => {
+    if (f.next !== f.again) return setMsg({ ok: false, text: "The new passwords do not match." });
+    setBusy(true); setMsg(null);
+    try { await api("/api/administration/password", { method: "POST", body: JSON.stringify({ current: f.current, next: f.next }) }); setF({ current: "", next: "", again: "" }); setMsg({ ok: true, text: "Password changed. Other sessions were signed out." }); }
+    catch (e: any) { setMsg({ ok: false, text: e.message }); }
+    setBusy(false);
+  };
+  return (
+    <Card className="space-y-3"><h2 className="font-medium">Administrator password</h2>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Current password"><input className={inputCls} type="password" autoComplete="current-password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} /></Field>
+        <Field label="New password (10+ characters)"><input className={inputCls} type="password" autoComplete="new-password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} /></Field>
+        <Field label="Repeat new password"><input className={inputCls} type="password" autoComplete="new-password" value={f.again} onChange={(e) => setF({ ...f, again: e.target.value })} /></Field>
+      </div>
+      {msg && <div className={`text-sm ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>{msg.text}</div>}
+      <Btn disabled={busy || !f.current || f.next.length < 10} onClick={save}>Change password</Btn></Card>
+  );
+}
+
 const MODES: [string, string, string][] = [["open", "Open", "Anyone can sign up and start immediately"], ["approval", "Approval", "Sign-ups wait until an admin approves them"], ["closed", "Closed", "Only admins can add users"]];
 
 export default function PlatformSettings() {
@@ -37,6 +59,7 @@ export default function PlatformSettings() {
           <Toggle on={s.maintenance} onChange={(v) => setS({ ...s, maintenance: v })} /></div></Card>
       {msg && <div className={`text-sm ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>{msg.text}</div>}
       <Btn disabled={busy} onClick={save}>Save settings</Btn>
+      <ChangePassword />
     </div>
   );
 }

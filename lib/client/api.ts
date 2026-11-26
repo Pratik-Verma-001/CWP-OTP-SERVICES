@@ -11,12 +11,14 @@ if (typeof window !== "undefined") {
 
 async function raw(path: string, init: RequestInit = {}) {
   await auth.authStateReady();
-  const token = await auth.currentUser?.getIdToken();
-  return fetch(path, { ...init, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...init.headers } });
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+  return fetch(path, { ...init, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers } });
 }
 export async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
   const res = await raw(path, init);
   const body = await res.json().catch(() => ({}));
+  if (res.status === 401 && typeof window !== "undefined" && window.location.pathname.startsWith("/administration") && !window.location.pathname.startsWith("/administration/login"))
+    window.location.href = "/administration/login";
   if (!res.ok) throw new Error(body?.error?.message || "Request failed");
   return body;
 }

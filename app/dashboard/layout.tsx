@@ -7,16 +7,16 @@ import Denied from "@/components/shell/Denied";
 import { Splash } from "@/components/ui";
 
 const NAV: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: "dashboard", group: "Overview", exact: true, dock: true },
+  { label: "Dashboard", short: "Home", href: "/dashboard", icon: "dashboard", group: "Overview", exact: true, dock: true },
   { label: "Projects", href: "/dashboard/projects", icon: "projects", group: "Build", dock: true },
-  { label: "API Keys", href: "/dashboard/api-keys", icon: "key", group: "Build", dock: true },
+  { label: "API Keys", short: "Keys", href: "/dashboard/api-keys", icon: "key", group: "Build", dock: true },
+  { label: "Test OTP", short: "Test", href: "/dashboard/test", icon: "send", group: "Build", dock: true },
   { label: "Email", href: "/dashboard/email", icon: "mail", group: "Build" },
-  { label: "Test OTP", href: "/dashboard/test", icon: "send", group: "Build", dock: true },
   { label: "OTP Logs", href: "/dashboard/logs", icon: "logs", group: "Monitor" },
   { label: "Analytics", href: "/dashboard/analytics", icon: "analytics", group: "Monitor" },
   { label: "WhatsApp", href: "/dashboard/whatsapp", icon: "chat", group: "Help" },
-  { label: "API Docs", href: "/dashboard/docs", icon: "docs", group: "Help" },
-  { label: "Settings", href: "/dashboard/settings", icon: "settings", group: "Help" },
+  { label: "Documentation", href: "/dashboard/docs", icon: "docs", group: "Help" },
+  { label: "Account", href: "/dashboard/settings", icon: "settings", group: "Help" },
 ];
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
@@ -24,9 +24,8 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => { if (s.state === "ok") prefetchApi(["/api/admin/stats?days=7", "/api/admin/setup", "/api/admin/projects"]); }, [s.state]);
   if (s.state === "loading") return <Splash />;
   if (s.state === "denied" || !s.me) return <Denied why={s.why} />;
-  const admin = s.me.role === "owner" || s.me.role === "admin";
   return (
-    <PanelShell variant="user" nav={NAV} me={s.me} switchTo={admin ? { label: "Administration", href: "/administration", icon: "shield" } : undefined}>
+    <PanelShell variant="user" nav={NAV} me={s.me}>
       {children}
     </PanelShell>
   );

@@ -8,7 +8,6 @@ export default defineConfig({
     // Fake secrets only; tests never read .env.local and never contact real services.
     env: {
       API_KEY_PEPPER: "a".repeat(64), OTP_HMAC_SECRET: "b".repeat(64), ENCRYPTION_KEY: "c".repeat(64),
-      ADMIN_ALLOWLIST: "admin@example.com",
     },
   },
 });

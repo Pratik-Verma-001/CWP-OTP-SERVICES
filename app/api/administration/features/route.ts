@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { audit, requireAdmin } from "@/lib/auth/admin";
+import { auditAdmin, requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase/admin";
 import { clearPlatformCache, loadFeatures } from "@/lib/platform";
 import { fail, internalError } from "@/lib/http";
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     if (error?.code === "23505") return fail(409, "DUPLICATE", "A feature with this key already exists.");
     if (error) throw error;
     clearPlatformCache();
-    await audit(admin.id, "feature.create", "feature", p.data.key);
+    await auditAdmin("feature.create", "feature", p.data.key);
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (e) { return internalError(e); }
 }
@@ -40,7 +40,7 @@ export async function PATCH(req: Request) {
     if (error) throw error;
     if (!data?.length) return fail(404, "NOT_FOUND", "Feature not found");
     clearPlatformCache();
-    await audit(admin.id, "feature.update", "feature", k, rest);
+    await auditAdmin("feature.update", "feature", k, rest);
     return NextResponse.json({ success: true });
   } catch (e) { return internalError(e); }
 }
@@ -53,7 +53,7 @@ export async function DELETE(req: Request) {
     const { data } = await db().from("features").delete().eq("key", k).eq("builtin", false).select("key");
     if (!data?.length) return fail(400, "INVALID_REQUEST", "Built-in features cannot be deleted. Disable them instead.");
     clearPlatformCache();
-    await audit(admin.id, "feature.delete", "feature", k);
+    await auditAdmin("feature.delete", "feature", k);
     return NextResponse.json({ success: true });
   } catch (e) { return internalError(e); }
 }

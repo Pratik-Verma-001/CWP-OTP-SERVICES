@@ -11,15 +11,14 @@ const LIMITS: [string, string][] = [["maxProjects", "Max projects"], ["maxKeysPe
 export default function UserDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: me } = useApi<any>("/api/admin/me");
   const { data: d, error, loading, reload } = useApi<any>(`/api/administration/users/${id}`);
-  const [name, setName] = useState(""), [notes, setNotes] = useState(""), [role, setRole] = useState("user");
+  const [name, setName] = useState(""), [notes, setNotes] = useState("");
   const [feat, setFeat] = useState<Record<string, Tri>>({}), [lim, setLim] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null), [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!d) return;
-    setName(d.user.name ?? ""); setNotes(d.user.notes ?? ""); setRole(d.user.role);
+    setName(d.user.name ?? ""); setNotes(d.user.notes ?? "");
     const f: Record<string, Tri> = {};
     for (const c of d.catalog) f[c.key] = d.user.features[c.key] === undefined ? "default" : d.user.features[c.key] ? "on" : "off";
     setFeat(f);
@@ -33,7 +32,7 @@ export default function UserDetail() {
     setBusy(false);
   };
   const saveAll = () => patch({
-    displayName: name.trim() || null, notes: notes.trim() || null, ...(role !== d.user.role && { role }),
+    displayName: name.trim() || null, notes: notes.trim() || null,
     features: Object.fromEntries(Object.entries(feat).map(([k, v]) => [k, v === "default" ? null : v === "on"])),
     ...(d.user.role === "user" && { limits: Object.fromEntries(LIMITS.map(([k]) => [k, lim[k] === "" ? null : Number(lim[k])])) }),
   });
@@ -44,14 +43,13 @@ export default function UserDetail() {
 
   if (loading && !d) return <Loading />;
   if (!d) return <ErrorBox text={error || "User not found"} />;
-  const u = d.user, isUser = u.role === "user", owner = me?.role === "owner", self = me?.id === u.id;
-  const locked = !isUser && !owner && !self;
+  const u = d.user, isUser = true, self = false, locked = false;
 
   return (
     <div className="space-y-4">
       <Link href="/administration/users" className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white"><Icon name="back" className="h-4 w-4" />All users</Link>
       <Card className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-xl font-semibold">{u.name || u.email}</h1><Badge s={u.role} /><Badge s={u.status} /></div>
+        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-xl font-semibold">{u.name || u.email}</h1><Badge s={u.status} /></div>
           <div className="truncate text-sm text-slate-400">{u.email}</div>
           <div className="mt-1 text-xs text-slate-500">Joined {new Date(u.created_at).toLocaleDateString()} · last login {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}</div></div>
         {!self && !locked && (
@@ -80,10 +78,8 @@ export default function UserDetail() {
 
       <Card className="space-y-4">
         <h2 className="font-medium">Profile and access</h2>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           <Field label="Name"><input className={inputCls} value={name} disabled={locked} onChange={(e) => setName(e.target.value)} /></Field>
-          <Field label="Role"><select className={inputCls} value={role} disabled={!owner || self} onChange={(e) => setRole(e.target.value)}>
-            <option value="user">User</option><option value="admin">Administrator</option><option value="owner">Owner</option></select></Field>
           <Field label="Private notes (admins only)"><input className={inputCls} value={notes} disabled={locked} onChange={(e) => setNotes(e.target.value)} /></Field>
         </div>
         <div>

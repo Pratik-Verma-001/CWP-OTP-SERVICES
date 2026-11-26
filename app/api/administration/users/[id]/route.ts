@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { audit, buildUser, isBootstrapAdmin, requireAdmin, type UserRow } from "@/lib/auth/admin";
+import { buildUser, type UserRow } from "@/lib/auth/admin";
+import { auditAdmin, requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase/admin";
 import { loadFeatures } from "@/lib/platform";
 import { firebaseAuth } from "@/lib/firebase/admin";
@@ -11,7 +12,7 @@ type Ctx = { params: { id: string } };
 const num = z.number().int().min(0).max(1000000).nullable().optional();
 const patchSchema = z.object({
   displayName: z.string().max(80).nullable().optional(), notes: z.string().max(1000).nullable().optional(),
-  role: z.enum(["user", "admin", "owner"]).optional(), status: z.enum(["pending", "active", "suspended"]).optional(),
+  status: z.enum(["pending", "active", "suspended"]).optional(),
   features: z.record(z.string().regex(/^[a-z][a-z0-9_]{1,40}$/), z.boolean().nullable()).optional(),
   limits: z.object({ maxProjects: num, maxKeysPerProject: num, dailyOtpLimit: num }).optional(),
 });
@@ -71,20 +72,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
     if (!t) return fail(404, "NOT_FOUND", "User not found");
     const b = patchSchema.safeParse(await req.json().catch(() => null));
     if (!b.success) return fail(400, "INVALID_REQUEST", "Invalid values");
-    const self = t.id === admin.id;
-    if (t.role !== "user" && !self && admin.role !== "owner") return fail(403, "FORBIDDEN", "Only an owner can modify administrators.");
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
     if (b.data.displayName !== undefined) patch.display_name = b.data.displayName;
     if (b.data.notes !== undefined) patch.notes = b.data.notes;
-    if (b.data.role !== undefined && b.data.role !== t.role) {
-      if (admin.role !== "owner") return fail(403, "FORBIDDEN", "Only an owner can change roles.");
-      if (self) return fail(400, "INVALID_REQUEST", "You cannot change your own role.");
-      if (isBootstrapAdmin(t.email)) return fail(400, "INVALID_REQUEST", "This account is an owner set in ADMIN_ALLOWLIST.");
-      patch.role = b.data.role;
-    }
     if (b.data.status !== undefined && b.data.status !== t.status) {
-      if (self) return fail(400, "INVALID_REQUEST", "You cannot change your own status.");
-      if (isBootstrapAdmin(t.email)) return fail(400, "INVALID_REQUEST", "This account is an owner set in ADMIN_ALLOWLIST.");
       patch.status = b.data.status;
     }
     if (b.data.features) {
@@ -99,7 +90,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
     }
     const { error } = await db().from("admin_profiles").update(patch).eq("id", t.id);
     if (error) throw error;
-    await audit(admin.id, "user.update", "user", t.id, { fields: Object.keys(patch).filter((k) => k !== "updated_at") });
+    await auditAdmin("user.update", "user", t.id, { fields: Object.keys(patch).filter((k) => k !== "updated_at") });
     return NextResponse.json({ success: true });
   } catch (e) { return internalError(e); }
 }
@@ -110,14 +101,11 @@ export async function DELETE(req: Request, { params }: Ctx) {
     if (!admin) return fail(401, "UNAUTHORIZED", "Unauthorized");
     const { data: t } = UUID.test(params.id) ? await db().from("admin_profiles").select("id,email,role,firebase_uid").eq("id", params.id).maybeSingle() : { data: null };
     if (!t) return fail(404, "NOT_FOUND", "User not found");
-    if (t.id === admin.id) return fail(400, "INVALID_REQUEST", "You cannot delete yourself.");
-    if (isBootstrapAdmin(t.email)) return fail(400, "INVALID_REQUEST", "This account is an owner set in ADMIN_ALLOWLIST.");
-    if (t.role !== "user" && admin.role !== "owner") return fail(403, "FORBIDDEN", "Only an owner can delete administrators.");
     await db().from("projects").delete().eq("owner_id", t.id); // cascades keys, OTP records, logs
     const { error } = await db().from("admin_profiles").delete().eq("id", t.id);
     if (error) throw error;
     try { await firebaseAuth().deleteUser(t.firebase_uid); } catch { /* login may already be gone */ }
-    await audit(admin.id, "user.delete", "user", t.id, { email: t.email });
+    await auditAdmin("user.delete", "user", t.id, { email: t.email });
     return NextResponse.json({ success: true });
   } catch (e) { return internalError(e); }
 }
