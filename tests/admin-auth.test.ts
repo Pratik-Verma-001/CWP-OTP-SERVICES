@@ -52,6 +52,11 @@ describe("admin session cookie", () => {
     const old = makeSessionToken("cwp-admin", Date.now() - 9 * 3600_000);
     expect(await parseSessionToken(old)).toBeNull();
   });
+  it("ignores Firebase bearer tokens: a signed-in regular user is never the administrator", async () => {
+    const firebaseLike = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyMSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20ifQ.signature";
+    expect(await requireAdmin(reqWith(undefined, "GET", { authorization: "Bearer " + firebaseLike }))).toBeNull();
+    expect(await requireAdmin(reqWith("not-a-session", "GET", { authorization: "Bearer " + firebaseLike }))).toBeNull();
+  });
   it("rejects a session for a different username", async () => {
     process.env.ADMIN_USERNAME = "someone-else";
     expect(await requireAdmin(reqWith(makeSessionToken("cwp-admin")))).toBeNull();

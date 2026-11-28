@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:termux": "sh -c \"ulimit -s 65536; vitest run\""
+    "test:termux": "sh -c \"ulimit -s 65536; vitest run\"",
+    "prune:stale": "node scripts/prune-stale.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.75.0",

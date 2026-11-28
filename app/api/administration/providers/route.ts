@@ -60,7 +60,13 @@ export async function POST(req: Request) {
     const admin = await requireAdmin(req);
     if (!admin) return fail(401, "UNAUTHORIZED", "Unauthorized");
     const p = testSchema.safeParse(await req.json().catch(() => null));
-    if (!p.success) return fail(400, "INVALID_REQUEST", "Invalid request");
+    if (!p.success) {
+      if (p.error.issues[0]?.path[0] === "to") return fail(400, "INVALID_REQUEST", "Enter a valid email address to send the test to.");
+      return fail(400, "INVALID_REQUEST", "Invalid request");
+    }
+    // A test email needs a recipient: the administrator session has no email address of its own to fall back to.
+    const to = p.data.to;
+    if (p.data.provider === "smtp" && p.data.action === "test_email" && !to) return fail(400, "INVALID_REQUEST", "Enter the email address to send the test to.");
 
     if (p.data.provider === "whatsapp") {
       const c = await getWaConfig();
@@ -71,8 +77,7 @@ export async function POST(req: Request) {
     const c: SmtpConfig | null = await getSmtpConfig();
     if (!c) return fail(400, "PROVIDER_NOT_CONFIGURED", "Email provider is not configured.");
     if (p.data.action === "test_email" && !(await testMailAllowedAdmin())) return fail(429, "RATE_LIMITED", "Test email limit reached (10 per hour).");
-    if (p.data.action === "test_email" && !p.data.to) return fail(400, "INVALID_REQUEST", "Enter the email address to send the test to.");
-    const r = p.data.action === "verify" ? await verifySmtp(c) : await sendTestEmail(c, p.data.to!);
+    const r = p.data.action === "verify" ? await verifySmtp(c) : await sendTestEmail(c, to as string);
     await auditAdmin(`provider.smtp.${p.data.action}`, "provider", "smtp", { ok: r.ok });
     return r.ok ? NextResponse.json({ success: true }) : fail(502, r.code, r.message);
   } catch (e) { return internalError(e); }
